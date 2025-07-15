@@ -631,25 +631,25 @@ const BiManagementSystem = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
+      <div className="max-w-[100rem] mx-auto flex-grow w-full">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 relative">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
             <div className="flex items-center space-x-3">
               <Image src="/favicon.ico" alt="BI Management Icon" width={40} height={40} className="rounded-lg" />
-              <h1 className="text-2xl font-bold text-gray-900">Gestão e Saneamento de BIs</h1>
+              <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">Gestão e Saneamento de BIs</h1>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-wrap gap-3 justify-end md:ml-auto">
               <button
                 onClick={() => setShowAddForm(true)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar BI
               </button>
 
-              <label className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer">
+              <label className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer text-xs">
                 <Upload className="h-4 w-4 mr-2" />
                 Importar Dados
                 <input type="file" accept=".json" onChange={handleImport} className="hidden" />
@@ -657,7 +657,7 @@ const BiManagementSystem = () => {
 
               <button
                 onClick={handleExport}
-                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar Dados
@@ -665,7 +665,7 @@ const BiManagementSystem = () => {
 
               <button
                 onClick={() => setShowAreaManagement(true)}
-                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs"
               >
                 <Building2 className="h-4 w-4 mr-2" />
                 Gerenciar Áreas
@@ -673,7 +673,7 @@ const BiManagementSystem = () => {
 
               <button
                 onClick={handleClearData}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
                 title="Limpar todos os dados"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -885,6 +885,21 @@ const BiManagementSystem = () => {
           onClose={() => setShowAreaManagement(false)}
         />
       )}
+
+      {/* Footer */}
+      <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
+        <p>
+          Desenvolvido por{" "}
+          <a
+            href="https://github.com/GiovanneRocha"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+          >
+            Giovanne Rocha
+          </a>
+        </p>
+      </footer>
     </div>
   )
 }

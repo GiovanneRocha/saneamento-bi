@@ -1,5 +1,9 @@
 import BiManagementSystem from "@/components/bi-management-system"
 
 export default function Home() {
-  return <BiManagementSystem />
+  return (
+    <main>
+      <BiManagementSystem />
+    </main>
+  )
 }

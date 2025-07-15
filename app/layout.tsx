@@ -6,8 +6,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "v0 App para Gestão e Saneamento de BIs",
-  description: "Sistema de gerenciamento e saneamento de Business Intelligence (BIs)",
+  title: "Gestão e Saneamento de BIs",
+  description: "Sistema completo para gerenciamento e saneamento de Business Intelligence",
   icons: {
     icon: "/favicon.ico",
   },
@@ -21,6 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   )

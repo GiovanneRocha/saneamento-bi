@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Edit2, Trash2, Plus, Building2 } from "lucide-react"
+import { Plus, Edit2, Trash2, X } from "lucide-react"
 
 interface Area {
   id: number
@@ -18,16 +18,28 @@ interface AreaManagementProps {
   onClose: () => void
 }
 
+interface AreaFormProps {
+  area?: Area
+  onSave: (area: Area | Omit<Area, "id">) => void
+  onCancel: () => void
+}
+
 const AreaManagement: React.FC<AreaManagementProps> = ({ areas, onAddArea, onEditArea, onDeleteArea, onClose }) => {
   const [showForm, setShowForm] = useState(false)
   const [editingArea, setEditingArea] = useState<Area | null>(null)
 
-  const AreaForm: React.FC<{
-    area?: Area
-    onSave: (area: Area | Omit<Area, "id">) => void
-    onCancel: () => void
-  }> = ({ area, onSave, onCancel }) => {
-    const [formData, setFormData] = useState({
+  const handleSave = (area: Area | Omit<Area, "id">) => {
+    if ("id" in area && area.id) {
+      onEditArea(area as Area)
+    } else {
+      onAddArea(area as Omit<Area, "id">)
+    }
+    setShowForm(false)
+    setEditingArea(null)
+  }
+
+  const AreaForm: React.FC<AreaFormProps> = ({ area, onSave, onCancel }) => {
+    const [formData, setFormData] = useState<Omit<Area, "id">>({
       name: area?.name || "",
       description: area?.description || "",
     })
@@ -39,12 +51,11 @@ const AreaManagement: React.FC<AreaManagementProps> = ({ areas, onAddArea, onEdi
         } else {
           onSave(formData)
         }
-        onCancel()
       }
     }
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg p-6 w-full max-w-md">
           <h3 className="text-lg font-semibold mb-4">{area ? "Editar Área" : "Adicionar Nova Área"}</h3>
 
@@ -96,71 +107,88 @@ const AreaManagement: React.FC<AreaManagementProps> = ({ areas, onAddArea, onEdi
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">Gerenciar Áreas/Sistemas</h2>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowForm(true)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Área
-              </button>
-              <button onClick={onClose} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200">
-                Fechar
-              </button>
-            </div>
+      <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Gerenciar Áreas/Sistemas</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <button
+            onClick={() => {
+              setEditingArea(null)
+              setShowForm(true)
+            }}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Nova Área
+          </button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nome da Área
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Descrição
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {areas.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
+                      Nenhuma área cadastrada.
+                    </td>
+                  </tr>
+                ) : (
+                  areas.map((area) => (
+                    <tr key={area.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{area.name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{area.description || "-"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingArea(area)
+                              setShowForm(true)
+                            }}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Editar Área"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => onDeleteArea(area.id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Excluir Área"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          {areas.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhuma área cadastrada</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {areas.map((area) => (
-                <div key={area.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <Building2 className="h-5 w-5 text-gray-400 mr-2" />
-                        <h3 className="text-lg font-medium text-gray-900">{area.name}</h3>
-                      </div>
-                      {area.description && <p className="text-sm text-gray-600">{area.description}</p>}
-                    </div>
-                    <div className="flex space-x-2 ml-4">
-                      <button
-                        onClick={() => setEditingArea(area)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Editar área"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteArea(area.id)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Excluir área"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {showForm && (
+          <AreaForm area={editingArea || undefined} onSave={handleSave} onCancel={() => setShowForm(false)} />
+        )}
       </div>
-
-      {/* Forms */}
-      {showForm && <AreaForm onSave={onAddArea} onCancel={() => setShowForm(false)} />}
-
-      {editingArea && <AreaForm area={editingArea} onSave={onEditArea} onCancel={() => setEditingArea(null)} />}
     </div>
   )
 }

@@ -325,8 +325,9 @@ const BiManagementSystem = () => {
   }
 
   const handleExport = () => {
+    // Exporta TODOS os BIs e Áreas, não apenas os filtrados, para um backup completo.
     const exportData = {
-      bis: filteredBis,
+      bis: bis,
       areas: areas,
       exportDate: new Date().toISOString(),
       version: "1.0",
@@ -578,26 +579,37 @@ const BiManagementSystem = () => {
         const importedData = JSON.parse(content)
 
         // Validar estrutura dos dados
-        if (
-          importedData.bis &&
-          Array.isArray(importedData.bis) &&
-          importedData.areas &&
-          Array.isArray(importedData.areas)
-        ) {
-          setBis(importedData.bis)
-          setAreas(importedData.areas)
-          setFilteredBis(importedData.bis)
-          calculateStats(importedData.bis)
-          saveToLocalStorage(importedData.bis, importedData.areas)
-
-          alert(
-            `Dados importados com sucesso!\n${importedData.bis.length} BIs e ${importedData.areas.length} áreas carregadas.`,
-          )
-        } else {
-          alert("Arquivo inválido. Por favor, use um arquivo exportado pelo sistema.")
+        if (!importedData || !Array.isArray(importedData.bis) || !Array.isArray(importedData.areas)) {
+          alert("Arquivo inválido. Por favor, use um arquivo exportado pelo sistema com a estrutura correta.")
+          return
         }
+
+        // Mesclar BIs
+        const currentBisMap = new Map<number, BiItem>(bis.map((bi) => [bi.id, bi]))
+        importedData.bis.forEach((importedBi: BiItem) => {
+          currentBisMap.set(importedBi.id, importedBi) // Sobrescreve se existe, adiciona se novo
+        })
+        const mergedBis = Array.from(currentBisMap.values())
+
+        // Mesclar Áreas
+        const currentAreasMap = new Map<number, Area>(areas.map((area) => [area.id, area]))
+        importedData.areas.forEach((importedArea: Area) => {
+          currentAreasMap.set(importedArea.id, importedArea) // Sobrescreve se existe, adiciona se novo
+        })
+        const mergedAreas = Array.from(currentAreasMap.values())
+
+        setBis(mergedBis)
+        setAreas(mergedAreas)
+        setFilteredBis(mergedBis) // Re-aplica filtros aos novos dados mesclados
+        calculateStats(mergedBis)
+        saveToLocalStorage(mergedBis, mergedAreas)
+
+        alert(
+          `Dados importados e mesclados com sucesso!\n${importedData.bis.length} BIs e ${importedData.areas.length} áreas do arquivo foram processados.`,
+        )
       } catch (error) {
-        alert("Erro ao importar arquivo. Verifique se o formato está correto.")
+        console.error("Erro durante a importação:", error)
+        alert("Erro ao importar arquivo. Verifique se o formato está correto e tente novamente.")
       }
     }
     reader.readAsText(file)

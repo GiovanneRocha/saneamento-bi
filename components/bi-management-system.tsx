@@ -21,8 +21,8 @@ import {
 import AreaManagement from "./area-management"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import BiForm from "./bi-form" // Declare BiForm before using it
-import { handleExport } from "@/utils/export-utils" // Import handleExport from a utils file or declare it
+import BiForm from "./bi-form" // Importar BiForm do novo arquivo
+import { handleExport } from "@/utils/export-utils" // Importar handleExport do novo arquivo
 
 interface BiItem {
   id: number
@@ -47,19 +47,6 @@ interface Area {
   id: number
   name: string
   description?: string
-}
-
-interface BiFormProps {
-  bi?: BiItem
-  onSave: (bi: BiItem) => void
-  onCancel: () => void
-  areas: Area[] // Passar as áreas disponíveis para o formulário
-}
-
-interface AreaFormProps {
-  area?: Area
-  onSave: (area: Area | Omit<Area, "id">) => void
-  onCancel: () => void
 }
 
 // Funções de persistência
@@ -110,8 +97,6 @@ const BiManagementSystem = () => {
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
 
   const [areas, setAreas] = useState<Area[]>([])
-  const [showAreaForm, setShowAreaForm] = useState(false)
-  const [editingArea, setEditingArea] = useState<Area | null>(null)
   const [showAreaManagement, setShowAreaManagement] = useState(false)
 
   // Dados de exemplo baseados na planilha
@@ -168,8 +153,6 @@ const BiManagementSystem = () => {
       status: "Sem responsável",
       lastUpdate: "2024-05-20",
       observations: "BI órfão, necessita definir responsável",
-      usage: "Semanal",
-      criticality: "Média",
     },
   ]
 
@@ -244,10 +227,10 @@ const BiManagementSystem = () => {
     const savedData = loadFromLocalStorage()
 
     const initialBis = savedData.bis.length > 0 ? savedData.bis : sampleData
-    const initialAreas = savedData.areas.length > 0 ? savedData.areas : initialAreas
+    const initialAreasData = savedData.areas.length > 0 ? savedData.areas : initialAreas
 
     setBis(initialBis)
-    setAreas(initialAreas)
+    setAreas(initialAreasData)
     // Chamar applyFilters com os dados iniciais carregados
     applyFilters(initialBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     calculateStats(initialBis)
@@ -359,20 +342,15 @@ const BiManagementSystem = () => {
     const updatedAreas = [...areas, areaWithId]
     setAreas(updatedAreas)
     saveToLocalStorage(bis, updatedAreas)
-    // Não é necessário chamar applyFilters aqui, pois a mudança de área não afeta diretamente os BIs filtrados
-    // a menos que um BI existente seja re-categorizado, o que não acontece nesta função.
-    setShowAreaForm(false)
+    setShowAreaManagement(false) // Fechar o formulário de área após adicionar
   }
 
   const handleEditArea = (updatedArea: Area) => {
     const updatedAreas = areas.map((area) => (area.id === updatedArea.id ? updatedArea : area))
     setAreas(updatedAreas)
     saveToLocalStorage(bis, updatedAreas)
-    // Após editar uma área, é importante re-aplicar os filtros nos BIs, pois o nome da área pode ter mudado
-    // ou a descrição, o que pode afetar a exibição ou a lógica de filtro se for mais complexa.
-    // Para garantir consistência, vamos re-aplicar os filtros com os BIs atuais.
     applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
-    setEditingArea(null)
+    setShowAreaManagement(false) // Fechar o formulário de área após editar
   }
 
   const handleDeleteArea = (id: number) => {
@@ -390,8 +368,6 @@ const BiManagementSystem = () => {
       const updatedAreas = areas.filter((area) => area.id !== id)
       setAreas(updatedAreas)
       saveToLocalStorage(bis, updatedAreas)
-      // Re-aplicar filtros após a exclusão de uma área para garantir que BIs que usavam essa área
-      // (se a lógica de filtro fosse mais complexa) sejam reavaliados.
       applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     }
   }
@@ -492,7 +468,7 @@ const BiManagementSystem = () => {
               </label>
 
               <Button
-                onClick={handleExport}
+                onClick={() => handleExport(bis, areas)} // Chamar handleExport com os dados atuais
                 className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs"
               >
                 <Download className="h-4 w-4 mr-2" />

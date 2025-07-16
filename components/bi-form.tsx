@@ -106,7 +106,11 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-full justify-between bg-transparent">
-                    {formData.area.length > 0 ? formData.area.join(", ") : "Selecione a(s) área(s)"}
+                    <span className="truncate max-w-[calc(100%-1.5rem)]">
+                      {" "}
+                      {/* Added truncate and max-width */}
+                      {formData.area.length > 0 ? formData.area.join(", ") : "Selecione a(s) área(s)"}
+                    </span>
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -139,6 +143,8 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
                 <option value="Em revisão">Em revisão</option>
                 <option value="Descontinuado">Descontinuado</option>
                 <option value="Sem responsável">Sem responsável</option>
+                <option value="Sem acesso">Sem acesso</option> {/* New status */}
+                <option value="Não encontrado">Não encontrado</option> {/* New status */}
               </select>
             </div>
 

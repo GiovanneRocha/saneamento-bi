@@ -17,6 +17,8 @@ import {
   BarChart3,
   Building2,
   ArrowUp,
+  Lock,
+  HelpCircle,
 } from "lucide-react"
 import AreaManagement from "./area-management"
 import Image from "next/image"
@@ -195,6 +197,12 @@ const BiManagementSystem = () => {
         filtered = filtered.filter((bi) => bi.status.includes("Desatualizado"))
       } else if (status === "no_owner") {
         filtered = filtered.filter((bi) => !bi.owner || bi.owner === "")
+      } else if (status === "Sem acesso") {
+        // New status filter
+        filtered = filtered.filter((bi) => bi.status === "Sem acesso")
+      } else if (status === "Não encontrado") {
+        // New status filter
+        filtered = filtered.filter((bi) => bi.status === "Não encontrado")
       }
     }
 
@@ -293,12 +301,15 @@ const BiManagementSystem = () => {
   const getStatusColor = (status: string) => {
     if (status === "Atualizado") return "text-green-600 bg-green-50"
     if (status.includes("Desatualizado")) return "text-red-600 bg-red-50"
+    if (status === "Sem acesso" || status === "Não encontrado") return "text-gray-600 bg-gray-100" // New status colors
     return "text-yellow-600 bg-yellow-50"
   }
 
   const getStatusIcon = (status: string) => {
     if (status === "Atualizado") return <CheckCircle className="h-4 w-4" />
     if (status.includes("Desatualizado")) return <XCircle className="h-4 w-4" />
+    if (status === "Sem acesso") return <Lock className="h-4 w-4" /> // Novo ícone para "Sem acesso"
+    if (status === "Não encontrado") return <HelpCircle className="h-4 w-4" /> // Novo ícone para "Não encontrado"
     return <AlertCircle className="h-4 w-4" />
   }
 
@@ -571,6 +582,8 @@ const BiManagementSystem = () => {
               <option value="updated">Atualizados</option>
               <option value="outdated">Desatualizados</option>
               <option value="no_owner">Sem Responsável</option>
+              <option value="Sem acesso">Sem acesso</option> {/* New status filter option */}
+              <option value="Não encontrado">Não encontrado</option> {/* New status filter option */}
             </select>
 
             <select

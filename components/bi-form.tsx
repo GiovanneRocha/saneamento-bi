@@ -143,7 +143,7 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
                 <option value="Em revisão">Em revisão</option>
                 <option value="Descontinuado">Descontinuado</option>
                 <option value="Sem responsável">Sem responsável</option>
-                <option value="Sem acesso">Sem acesso</option> {/* New status */}
+                <option value="Sem permissão">Sem permissão</option>
                 <option value="Não encontrado">Não encontrado</option> {/* New status */}
               </select>
             </div>

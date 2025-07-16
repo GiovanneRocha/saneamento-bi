@@ -867,6 +867,11 @@ const BiManagementSystem = () => {
               <p className="text-gray-500">Nenhum BI encontrado com os filtros aplicados</p>
             </div>
           )}
+
+          {/* BI Counter */}
+          <div className="p-4 text-right text-sm text-gray-600 border-t border-gray-200">
+            Mostrando {filteredBis.length} de {bis.length} BIs
+          </div>
         </div>
       </div>
 

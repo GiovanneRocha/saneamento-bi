@@ -93,6 +93,8 @@ const BiManagementSystem = () => {
   const [filterArea, setFilterArea] = useState("all")
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingBi, setEditingBi] = useState<BiItem | null>(null)
+  const [filterMonth, setFilterMonth] = useState("all")
+  const [filterYear, setFilterYear] = useState("all")
   const [stats, setStats] = useState<Stats>({
     total: 0,
     updated: 0,
@@ -204,10 +206,10 @@ const BiManagementSystem = () => {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
-    applyFilters(term, filterStatus, filterArea)
+    applyFilters(term, filterStatus, filterArea, filterMonth, filterYear)
   }
 
-  const applyFilters = (search: string, status: string, area: string) => {
+  const applyFilters = (search: string, status: string, area: string, month: string, year: string) => {
     let filtered = bis
 
     if (search) {
@@ -233,17 +235,43 @@ const BiManagementSystem = () => {
       filtered = filtered.filter((bi) => bi.area === area)
     }
 
+    // Lógica de filtro por mês e ano
+    if (month !== "all" || year !== "all") {
+      filtered = filtered.filter((bi) => {
+        if (!bi.lastUpdate) return false
+        // Adiciona 'T00:00:00' para garantir que a data seja interpretada no fuso horário local
+        const biDate = new Date(bi.lastUpdate + "T00:00:00")
+        const biMonth = (biDate.getMonth() + 1).toString().padStart(2, "0") // getMonth é 0-indexed
+        const biYear = biDate.getFullYear().toString()
+
+        const matchesMonth = month === "all" || biMonth === month
+        const matchesYear = year === "all" || biYear === year
+
+        return matchesMonth && matchesYear
+      })
+    }
+
     setFilteredBis(filtered)
   }
 
   const handleStatusFilter = (status: string) => {
     setFilterStatus(status)
-    applyFilters(searchTerm, status, filterArea)
+    applyFilters(searchTerm, status, filterArea, filterMonth, filterYear)
   }
 
   const handleAreaFilter = (area: string) => {
     setFilterArea(area)
-    applyFilters(searchTerm, filterStatus, area)
+    applyFilters(searchTerm, filterStatus, area, filterMonth, filterYear)
+  }
+
+  const handleMonthFilter = (month: string) => {
+    setFilterMonth(month)
+    applyFilters(searchTerm, filterStatus, filterArea, month, filterYear)
+  }
+
+  const handleYearFilter = (year: string) => {
+    setFilterYear(year)
+    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, year)
   }
 
   const getStatusColor = (status: string) => {
@@ -269,7 +297,7 @@ const BiManagementSystem = () => {
     const updatedBis = [...bis, biWithId]
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(searchTerm, filterStatus, filterArea)
+    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear)
     calculateStats(updatedBis)
     setShowAddForm(false)
   }
@@ -278,7 +306,7 @@ const BiManagementSystem = () => {
     const updatedBis = bis.map((bi) => (bi.id === updatedBi.id ? updatedBi : bi))
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(searchTerm, filterStatus, filterArea)
+    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear)
     calculateStats(updatedBis)
     setEditingBi(null)
   }
@@ -288,7 +316,7 @@ const BiManagementSystem = () => {
       const updatedBis = bis.filter((bi) => bi.id !== id)
       setBis(updatedBis)
       saveToLocalStorage(updatedBis, areas)
-      applyFilters(searchTerm, filterStatus, filterArea)
+      applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear)
       calculateStats(updatedBis)
     }
   }
@@ -760,6 +788,41 @@ const BiManagementSystem = () => {
                 </option>
               ))}
             </select>
+
+            {/* Novo filtro de Mês */}
+            <select
+              value={filterMonth}
+              onChange={(e) => handleMonthFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todos os Meses</option>
+              <option value="01">Janeiro</option>
+              <option value="02">Fevereiro</option>
+              <option value="03">Março</option>
+              <option value="04">Abril</option>
+              <option value="05">Maio</option>
+              <option value="06">Junho</option>
+              <option value="07">Julho</option>
+              <option value="08">Agosto</option>
+              <option value="09">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+
+            {/* Novo filtro de Ano */}
+            <select
+              value={filterYear}
+              onChange={(e) => handleYearFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todos os Anos</option>
+              {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -827,7 +890,7 @@ const BiManagementSystem = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {bi.lastUpdate ? new Date(bi.lastUpdate).toLocaleDateString("pt-BR") : "-"}
+                      {bi.lastUpdate ? new Date(bi.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR") : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bi.usage}</td>
                     <td className="px-6 py-4 whitespace-nowrap">

@@ -17,19 +17,12 @@ import {
   BarChart3,
   Building2,
   ArrowUp,
-  ChevronDown,
 } from "lucide-react"
 import AreaManagement from "./area-management"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu" // Importar componentes do DropdownMenu
+import BiForm from "./bi-form" // Declare BiForm before using it
+import { handleExport } from "@/utils/export-utils" // Import handleExport from a utils file or declare it
 
 interface BiItem {
   id: number
@@ -191,51 +184,9 @@ const BiManagementSystem = () => {
     { id: 8, name: "Controladoria", description: "Área de Controladoria Geral" }, // Adicionado para exemplo
   ]
 
-  useEffect(() => {
-    const savedData = loadFromLocalStorage()
-
-    if (savedData.bis.length > 0 || savedData.areas.length > 0) {
-      setBis(savedData.bis.length > 0 ? savedData.bis : sampleData)
-      setAreas(savedData.areas.length > 0 ? savedData.areas : initialAreas)
-      setFilteredBis(savedData.bis.length > 0 ? savedData.bis : sampleData)
-      calculateStats(savedData.bis.length > 0 ? savedData.bis : sampleData)
-    } else {
-      setBis(sampleData)
-      setFilteredBis(sampleData)
-      setAreas(initialAreas)
-      calculateStats(sampleData)
-    }
-  }, [])
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 200) {
-        setShowScrollToTopButton(true)
-      } else {
-        setShowScrollToTopButton(false)
-      }
-    }
-
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-
-  const calculateStats = (data: BiItem[]) => {
-    const newStats: Stats = {
-      total: data.length,
-      updated: data.filter((bi) => bi.status === "Atualizado").length,
-      outdated: data.filter((bi) => bi.status.includes("Desatualizado")).length,
-      noOwner: data.filter((bi) => !bi.owner || bi.owner === "").length,
-    }
-    setStats(newStats)
-  }
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term)
-    applyFilters(term, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
-  }
-
+  // Refatorar applyFilters para aceitar os dados como argumento
   const applyFilters = (
+    dataToFilter: BiItem[], // Novo parâmetro
     search: string,
     status: string,
     area: string,
@@ -243,7 +194,7 @@ const BiManagementSystem = () => {
     year: string,
     criticality: string,
   ) => {
-    let filtered = bis
+    let filtered = dataToFilter
 
     if (search) {
       filtered = filtered.filter(
@@ -264,7 +215,6 @@ const BiManagementSystem = () => {
       }
     }
 
-    // Lógica de filtro para múltiplas áreas
     if (area !== "all") {
       filtered = filtered.filter((bi) => bi.area.includes(area))
     }
@@ -290,29 +240,71 @@ const BiManagementSystem = () => {
     setFilteredBis(filtered)
   }
 
+  useEffect(() => {
+    const savedData = loadFromLocalStorage()
+
+    const initialBis = savedData.bis.length > 0 ? savedData.bis : sampleData
+    const initialAreas = savedData.areas.length > 0 ? savedData.areas : initialAreas
+
+    setBis(initialBis)
+    setAreas(initialAreas)
+    // Chamar applyFilters com os dados iniciais carregados
+    applyFilters(initialBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+    calculateStats(initialBis)
+  }, []) // Este useEffect só roda na montagem inicial
+
+  // Efeito para controlar a visibilidade do botão "Voltar ao Topo"
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 200) {
+        setShowScrollToTopButton(true)
+      } else {
+        setShowScrollToTopButton(false)
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  const calculateStats = (data: BiItem[]) => {
+    const newStats: Stats = {
+      total: data.length,
+      updated: data.filter((bi) => bi.status === "Atualizado").length,
+      outdated: data.filter((bi) => bi.status.includes("Desatualizado")).length,
+      noOwner: data.filter((bi) => !bi.owner || bi.owner === "").length,
+    }
+    setStats(newStats)
+  }
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term)
+    applyFilters(bis, term, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'bis' atual
+  }
+
   const handleStatusFilter = (status: string) => {
     setFilterStatus(status)
-    applyFilters(searchTerm, status, filterArea, filterMonth, filterYear, filterCriticality)
+    applyFilters(bis, searchTerm, status, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'bis' atual
   }
 
   const handleAreaFilter = (area: string) => {
     setFilterArea(area)
-    applyFilters(searchTerm, filterStatus, area, filterMonth, filterYear, filterCriticality)
+    applyFilters(bis, searchTerm, filterStatus, area, filterMonth, filterYear, filterCriticality) // Passar 'bis' atual
   }
 
   const handleMonthFilter = (month: string) => {
     setFilterMonth(month)
-    applyFilters(searchTerm, filterStatus, filterArea, month, filterYear, filterCriticality)
+    applyFilters(bis, searchTerm, filterStatus, filterArea, month, filterYear, filterCriticality) // Passar 'bis' atual
   }
 
   const handleYearFilter = (year: string) => {
     setFilterYear(year)
-    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, year, filterCriticality)
+    applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, year, filterCriticality) // Passar 'bis' atual
   }
 
   const handleCriticalityFilter = (criticality: string) => {
     setFilterCriticality(criticality)
-    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, criticality)
+    applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, criticality) // Passar 'bis' atual
   }
 
   const getStatusColor = (status: string) => {
@@ -338,7 +330,7 @@ const BiManagementSystem = () => {
     const updatedBis = [...bis, biWithId]
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'updatedBis'
     calculateStats(updatedBis)
     setShowAddForm(false)
   }
@@ -347,7 +339,7 @@ const BiManagementSystem = () => {
     const updatedBis = bis.map((bi) => (bi.id === updatedBi.id ? updatedBi : bi))
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'updatedBis'
     calculateStats(updatedBis)
     setEditingBi(null)
   }
@@ -357,7 +349,7 @@ const BiManagementSystem = () => {
       const updatedBis = bis.filter((bi) => bi.id !== id)
       setBis(updatedBis)
       saveToLocalStorage(updatedBis, areas)
-      applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+      applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'updatedBis'
       calculateStats(updatedBis)
     }
   }
@@ -367,6 +359,8 @@ const BiManagementSystem = () => {
     const updatedAreas = [...areas, areaWithId]
     setAreas(updatedAreas)
     saveToLocalStorage(bis, updatedAreas)
+    // Não é necessário chamar applyFilters aqui, pois a mudança de área não afeta diretamente os BIs filtrados
+    // a menos que um BI existente seja re-categorizado, o que não acontece nesta função.
     setShowAreaForm(false)
   }
 
@@ -374,6 +368,10 @@ const BiManagementSystem = () => {
     const updatedAreas = areas.map((area) => (area.id === updatedArea.id ? updatedArea : area))
     setAreas(updatedAreas)
     saveToLocalStorage(bis, updatedAreas)
+    // Após editar uma área, é importante re-aplicar os filtros nos BIs, pois o nome da área pode ter mudado
+    // ou a descrição, o que pode afetar a exibição ou a lógica de filtro se for mais complexa.
+    // Para garantir consistência, vamos re-aplicar os filtros com os BIs atuais.
+    applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     setEditingArea(null)
   }
 
@@ -381,7 +379,6 @@ const BiManagementSystem = () => {
     const areaToDelete = areas.find((a) => a.id === id)
     if (!areaToDelete) return
 
-    // Verificar se a área está sendo usada por algum BI (agora verifica em arrays)
     const areaInUse = bis.some((bi) => bi.area.includes(areaToDelete.name))
 
     if (areaInUse) {
@@ -393,272 +390,10 @@ const BiManagementSystem = () => {
       const updatedAreas = areas.filter((area) => area.id !== id)
       setAreas(updatedAreas)
       saveToLocalStorage(bis, updatedAreas)
+      // Re-aplicar filtros após a exclusão de uma área para garantir que BIs que usavam essa área
+      // (se a lógica de filtro fosse mais complexa) sejam reavaliados.
+      applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     }
-  }
-
-  const handleExport = () => {
-    const exportData = {
-      bis: bis,
-      areas: areas,
-      exportDate: new Date().toISOString(),
-      version: "1.0",
-    }
-
-    const dataStr = JSON.stringify(exportData, null, 2)
-    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
-
-    const exportFileDefaultName = `bis_backup_${new Date().toISOString().split("T")[0]}.json`
-
-    const linkElement = document.createElement("a")
-    linkElement.setAttribute("href", dataUri)
-    linkElement.setAttribute("download", exportFileDefaultName)
-    linkElement.click()
-  }
-
-  const AreaForm: React.FC<AreaFormProps> = ({ area, onSave, onCancel }) => {
-    const [formData, setFormData] = useState<Omit<Area, "id">>({
-      name: area?.name || "",
-      description: area?.description || "",
-    })
-
-    const handleSubmit = () => {
-      if (formData.name.trim()) {
-        if (area) {
-          onSave({ ...formData, id: area.id })
-        } else {
-          onSave(formData)
-        }
-      }
-    }
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md">
-          <h3 className="text-lg font-semibold mb-4">{area ? "Editar Área" : "Adicionar Nova Área"}</h3>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Área/Sistema *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ex: BW, Controladoria, etc."
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descrição (Opcional)</label>
-              <input
-                type="text"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Descrição da área ou sistema"
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                {area ? "Salvar Alterações" : "Adicionar Área"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
-    const [formData, setFormData] = useState<Omit<BiItem, "id">>({
-      name: bi?.name || "",
-      owner: bi?.owner || "",
-      area: bi?.area || [], // Inicializa como array vazio
-      status: bi?.status || "Atualizado",
-      lastUpdate: bi?.lastUpdate || "",
-      observations: bi?.observations || "",
-      usage: bi?.usage || "Mensal",
-      criticality: bi?.criticality || "Média",
-    })
-
-    const handleSubmit = () => {
-      if (formData.name && formData.area.length > 0) {
-        // Valida se pelo menos uma área foi selecionada
-        if (bi) {
-          onSave({ ...formData, id: bi.id })
-        } else {
-          onSave(formData as BiItem)
-        }
-      } else {
-        alert("Por favor, preencha o nome do BI e selecione pelo menos uma área.")
-      }
-    }
-
-    const toggleAreaSelection = (areaName: string) => {
-      setFormData((prev) => {
-        const currentAreas = prev.area || []
-        if (currentAreas.includes(areaName)) {
-          return { ...prev, area: currentAreas.filter((a) => a !== areaName) }
-        } else {
-          return { ...prev, area: [...currentAreas, areaName] }
-        }
-      })
-    }
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <h3 className="text-lg font-semibold mb-4">{bi ? "Editar BI" : "Adicionar Novo BI"}</h3>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do BI *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Responsável/Dono</label>
-                <input
-                  type="text"
-                  value={formData.owner}
-                  onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Área/Sistema *</label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between bg-transparent">
-                      {formData.area.length > 0 ? formData.area.join(", ") : "Selecione a(s) área(s)"}
-                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                    <DropdownMenuLabel>Selecione as Áreas</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {areas.map((area) => (
-                      <DropdownMenuCheckboxItem
-                        key={area.id}
-                        checked={formData.area.includes(area.name)}
-                        onCheckedChange={() => toggleAreaSelection(area.name)}
-                      >
-                        {area.name}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="Atualizado">Atualizado</option>
-                  <option value="Desatualizado">Desatualizado</option>
-                  <option value="Em revisão">Em revisão</option>
-                  <option value="Descontinuado">Descontinuado</option>
-                  <option value="Sem responsável">Sem responsável</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data da Última Atualização</label>
-                <input
-                  type="date"
-                  value={formData.lastUpdate}
-                  onChange={(e) => setFormData({ ...formData, lastUpdate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Frequência de Uso</label>
-                <select
-                  value={formData.usage}
-                  onChange={(e) => setFormData({ ...formData, usage: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="Diário">Diário</option>
-                  <option value="Semanal">Semanal</option>
-                  <option value="Mensal">Mensal</option>
-                  <option value="Trimestral">Trimestral</option>
-                  <option value="Anual">Anual</option>
-                  <option value="Sob demanda">Sob demanda</option>
-                  <option value="Não utilizado">Não utilizado</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Criticidade</label>
-                <select
-                  value={formData.criticality}
-                  onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="Alta">Alta</option>
-                  <option value="Média">Média</option>
-                  <option value="Baixa">Baixa</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-              <textarea
-                value={formData.observations}
-                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Observações, problemas identificados, melhorias necessárias..."
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                {bi ? "Salvar Alterações" : "Adicionar BI"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -678,7 +413,6 @@ const BiManagementSystem = () => {
 
         const currentBisMap = new Map<number, BiItem>(bis.map((bi) => [bi.id, bi]))
         importedData.bis.forEach((importedBi: BiItem) => {
-          // Ensure area is an array, even if imported as string (for backward compatibility)
           if (typeof importedBi.area === "string") {
             importedBi.area = [importedBi.area]
           }
@@ -694,7 +428,7 @@ const BiManagementSystem = () => {
 
         setBis(mergedBis)
         setAreas(mergedAreas)
-        setFilteredBis(mergedBis)
+        applyFilters(mergedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'mergedBis'
         calculateStats(mergedBis)
         saveToLocalStorage(mergedBis, mergedAreas)
 
@@ -715,7 +449,7 @@ const BiManagementSystem = () => {
     if (window.confirm("Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.")) {
       setBis([])
       setAreas([])
-      setFilteredBis([])
+      setFilteredBis([]) // Limpar filteredBis também
       calculateStats([])
       localStorage.removeItem(STORAGE_KEY_BIS)
       localStorage.removeItem(STORAGE_KEY_AREAS)

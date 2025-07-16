@@ -16,9 +16,11 @@ import {
   XCircle,
   BarChart3,
   Building2,
+  ArrowUp,
 } from "lucide-react"
 import AreaManagement from "./area-management"
 import Image from "next/image"
+import { Button } from "@/components/ui/button" // Importar o componente Button
 
 interface BiItem {
   id: number
@@ -95,13 +97,14 @@ const BiManagementSystem = () => {
   const [editingBi, setEditingBi] = useState<BiItem | null>(null)
   const [filterMonth, setFilterMonth] = useState("all")
   const [filterYear, setFilterYear] = useState("all")
-  const [filterCriticality, setFilterCriticality] = useState("all") // Novo estado para o filtro de criticidade
+  const [filterCriticality, setFilterCriticality] = useState("all")
   const [stats, setStats] = useState<Stats>({
     total: 0,
     updated: 0,
     outdated: 0,
     noOwner: 0,
   })
+  const [showScrollToTopButton, setShowScrollToTopButton] = useState(false) // Novo estado para o botão de voltar ao topo
 
   const [areas, setAreas] = useState<Area[]>([])
   const [showAreaForm, setShowAreaForm] = useState(false)
@@ -193,6 +196,21 @@ const BiManagementSystem = () => {
       setAreas(initialAreas)
       calculateStats(sampleData)
     }
+  }, [])
+
+  // Efeito para controlar a visibilidade do botão "Voltar ao Topo"
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 200) {
+        // Mostra o botão após rolar 200px
+        setShowScrollToTopButton(true)
+      } else {
+        setShowScrollToTopButton(false)
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   const calculateStats = (data: BiItem[]) => {
@@ -676,6 +694,13 @@ const BiManagementSystem = () => {
     }
   }
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
       <div className="max-w-[100rem] mx-auto flex-grow w-full">
@@ -687,13 +712,13 @@ const BiManagementSystem = () => {
               <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">Gestão e Saneamento de BIs</h1>
             </div>
             <div className="flex flex-wrap gap-3 justify-end md:ml-auto">
-              <button
+              <Button
                 onClick={() => setShowAddForm(true)}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar BI
-              </button>
+              </Button>
 
               <label className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer text-xs">
                 <Upload className="h-4 w-4 mr-2" />
@@ -701,30 +726,30 @@ const BiManagementSystem = () => {
                 <input type="file" accept=".json" onChange={handleImport} className="hidden" />
               </label>
 
-              <button
+              <Button
                 onClick={handleExport}
                 className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar Dados
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => setShowAreaManagement(true)}
                 className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs"
               >
                 <Building2 className="h-4 w-4 mr-2" />
                 Gerenciar Áreas
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={handleClearData}
                 className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
                 title="Limpar todos os dados"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Limpar Dados
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -932,20 +957,24 @@ const BiManagementSystem = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
+                        <Button
                           onClick={() => setEditingBi(bi)}
                           className="text-blue-600 hover:text-blue-900"
                           title="Editar"
+                          variant="ghost"
+                          size="icon"
                         >
                           <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => handleDeleteBi(bi.id)}
                           className="text-red-600 hover:text-red-900"
                           title="Excluir"
+                          variant="ghost"
+                          size="icon"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -961,9 +990,22 @@ const BiManagementSystem = () => {
             </div>
           )}
 
-          {/* BI Counter */}
-          <div className="p-4 text-right text-sm text-gray-600 border-t border-gray-200">
-            Mostrando {filteredBis.length} de {bis.length} BIs
+          {/* BI Counter and Scroll to Top Button */}
+          <div className="flex justify-between items-center p-4 text-sm text-gray-600 border-t border-gray-200">
+            <span>
+              Mostrando {filteredBis.length} de {bis.length} BIs
+            </span>
+            {showScrollToTopButton && (
+              <Button
+                onClick={scrollToTop}
+                className="flex items-center px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-xs"
+                variant="outline"
+                size="sm"
+              >
+                <ArrowUp className="h-4 w-4 mr-1" />
+                Voltar ao Topo
+              </Button>
+            )}
           </div>
         </div>
       </div>

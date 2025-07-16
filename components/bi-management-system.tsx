@@ -784,17 +784,6 @@ const BiManagementSystem = () => {
             </div>
 
             <select
-              value={filterStatus}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">Todos os Status</option>
-              <option value="updated">Atualizados</option>
-              <option value="outdated">Desatualizados</option>
-              <option value="no_owner">Sem Responsável</option>
-            </select>
-
-            <select
               value={filterArea}
               onChange={(e) => handleAreaFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -805,6 +794,17 @@ const BiManagementSystem = () => {
                   {area.name}
                 </option>
               ))}
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => handleStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todos os Status</option>
+              <option value="updated">Atualizados</option>
+              <option value="outdated">Desatualizados</option>
+              <option value="no_owner">Sem Responsável</option>
             </select>
 
             {/* Novo filtro de Mês */}

@@ -95,6 +95,7 @@ const BiManagementSystem = () => {
   const [editingBi, setEditingBi] = useState<BiItem | null>(null)
   const [filterMonth, setFilterMonth] = useState("all")
   const [filterYear, setFilterYear] = useState("all")
+  const [filterCriticality, setFilterCriticality] = useState("all") // Novo estado para o filtro de criticidade
   const [stats, setStats] = useState<Stats>({
     total: 0,
     updated: 0,
@@ -206,10 +207,17 @@ const BiManagementSystem = () => {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
-    applyFilters(term, filterStatus, filterArea, filterMonth, filterYear)
+    applyFilters(term, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
   }
 
-  const applyFilters = (search: string, status: string, area: string, month: string, year: string) => {
+  const applyFilters = (
+    search: string,
+    status: string,
+    area: string,
+    month: string,
+    year: string,
+    criticality: string,
+  ) => {
     let filtered = bis
 
     if (search) {
@@ -251,27 +259,37 @@ const BiManagementSystem = () => {
       })
     }
 
+    // Novo filtro de Criticidade
+    if (criticality !== "all") {
+      filtered = filtered.filter((bi) => bi.criticality === criticality)
+    }
+
     setFilteredBis(filtered)
   }
 
   const handleStatusFilter = (status: string) => {
     setFilterStatus(status)
-    applyFilters(searchTerm, status, filterArea, filterMonth, filterYear)
+    applyFilters(searchTerm, status, filterArea, filterMonth, filterYear, filterCriticality)
   }
 
   const handleAreaFilter = (area: string) => {
     setFilterArea(area)
-    applyFilters(searchTerm, filterStatus, area, filterMonth, filterYear)
+    applyFilters(searchTerm, filterStatus, area, filterMonth, filterYear, filterCriticality)
   }
 
   const handleMonthFilter = (month: string) => {
     setFilterMonth(month)
-    applyFilters(searchTerm, filterStatus, filterArea, month, filterYear)
+    applyFilters(searchTerm, filterStatus, filterArea, month, filterYear, filterCriticality)
   }
 
   const handleYearFilter = (year: string) => {
     setFilterYear(year)
-    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, year)
+    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, year, filterCriticality)
+  }
+
+  const handleCriticalityFilter = (criticality: string) => {
+    setFilterCriticality(criticality)
+    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, criticality)
   }
 
   const getStatusColor = (status: string) => {
@@ -297,7 +315,7 @@ const BiManagementSystem = () => {
     const updatedBis = [...bis, biWithId]
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear)
+    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     calculateStats(updatedBis)
     setShowAddForm(false)
   }
@@ -306,7 +324,7 @@ const BiManagementSystem = () => {
     const updatedBis = bis.map((bi) => (bi.id === updatedBi.id ? updatedBi : bi))
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear)
+    applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     calculateStats(updatedBis)
     setEditingBi(null)
   }
@@ -316,7 +334,7 @@ const BiManagementSystem = () => {
       const updatedBis = bis.filter((bi) => bi.id !== id)
       setBis(updatedBis)
       saveToLocalStorage(updatedBis, areas)
-      applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear)
+      applyFilters(searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
       calculateStats(updatedBis)
     }
   }
@@ -822,6 +840,18 @@ const BiManagementSystem = () => {
                   {year}
                 </option>
               ))}
+            </select>
+
+            {/* Novo filtro de Criticidade */}
+            <select
+              value={filterCriticality}
+              onChange={(e) => handleCriticalityFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todas as Criticidades</option>
+              <option value="Alta">Alta</option>
+              <option value="Média">Média</option>
+              <option value="Baixa">Baixa</option>
             </select>
           </div>
         </div>

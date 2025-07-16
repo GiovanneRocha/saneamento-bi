@@ -17,16 +17,25 @@ import {
   BarChart3,
   Building2,
   ArrowUp,
+  ChevronDown,
 } from "lucide-react"
 import AreaManagement from "./area-management"
 import Image from "next/image"
-import { Button } from "@/components/ui/button" // Importar o componente Button
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu" // Importar componentes do DropdownMenu
 
 interface BiItem {
   id: number
   name: string
   owner: string
-  area: string
+  area: string[] // Alterado para array de strings
   status: string
   lastUpdate: string
   observations: string
@@ -51,6 +60,7 @@ interface BiFormProps {
   bi?: BiItem
   onSave: (bi: BiItem) => void
   onCancel: () => void
+  areas: Area[] // Passar as áreas disponíveis para o formulário
 }
 
 interface AreaFormProps {
@@ -104,7 +114,7 @@ const BiManagementSystem = () => {
     outdated: 0,
     noOwner: 0,
   })
-  const [showScrollToTopButton, setShowScrollToTopButton] = useState(false) // Novo estado para o botão de voltar ao topo
+  const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
 
   const [areas, setAreas] = useState<Area[]>([])
   const [showAreaForm, setShowAreaForm] = useState(false)
@@ -117,7 +127,7 @@ const BiManagementSystem = () => {
       id: 1,
       name: "Visão Gerencial - Estoques VMSA",
       owner: "Gabriel Lauer Oliveira",
-      area: "BW",
+      area: ["BW"], // Alterado para array
       status: "Atualizado",
       lastUpdate: "2024-01-15",
       observations: "Formatação do layout",
@@ -128,7 +138,7 @@ const BiManagementSystem = () => {
       id: 2,
       name: "Estoque Matéria Prima",
       owner: "Bruno Filgueiras Alves",
-      area: "BW",
+      area: ["BW", "Controladoria"], // Exemplo com múltiplas áreas
       status: "Atualizado",
       lastUpdate: "2024-01-10",
       observations: "Formatação do layout",
@@ -139,7 +149,7 @@ const BiManagementSystem = () => {
       id: 3,
       name: "Dashboard Preços Entrada de Pedidos",
       owner: "Marcio Tagata Motitsuki",
-      area: "2368_Controladoria_ABUB",
+      area: ["2368_Controladoria_ABUB"],
       status: "Desatualizado desde 06/08/24",
       lastUpdate: "2024-08-06",
       observations: "Corrigir da grafico pagina 6",
@@ -150,7 +160,7 @@ const BiManagementSystem = () => {
       id: 4,
       name: "EBIT",
       owner: "Anna Vitoria Santos",
-      area: "2423_Apresentação de Custos e R",
+      area: ["2423_Apresentação de Custos e R"],
       status: "Desatualizado desde 06/11/24",
       lastUpdate: "2024-11-06",
       observations: "Necessita revisão",
@@ -161,7 +171,7 @@ const BiManagementSystem = () => {
       id: 5,
       name: "Relatório Vendas Regional",
       owner: "",
-      area: "BW",
+      area: ["BW", "Vendas"], // Exemplo com múltiplas áreas
       status: "Sem responsável",
       lastUpdate: "2024-05-20",
       observations: "BI órfão, necessita definir responsável",
@@ -177,20 +187,19 @@ const BiManagementSystem = () => {
     { id: 4, name: "2423_Controladoria_Corporate", description: "Controladoria Corporate" },
     { id: 5, name: "2423_Controladoria_Custos", description: "Controladoria de Custos" },
     { id: 6, name: "2423_Controladoria_Estoque", description: "Controladoria de Estoque" },
+    { id: 7, name: "Vendas", description: "Área de Vendas" }, // Adicionado para exemplo
+    { id: 8, name: "Controladoria", description: "Área de Controladoria Geral" }, // Adicionado para exemplo
   ]
 
   useEffect(() => {
-    // Tentar carregar dados salvos primeiro
     const savedData = loadFromLocalStorage()
 
     if (savedData.bis.length > 0 || savedData.areas.length > 0) {
-      // Usar dados salvos
       setBis(savedData.bis.length > 0 ? savedData.bis : sampleData)
       setAreas(savedData.areas.length > 0 ? savedData.areas : initialAreas)
       setFilteredBis(savedData.bis.length > 0 ? savedData.bis : sampleData)
       calculateStats(savedData.bis.length > 0 ? savedData.bis : sampleData)
     } else {
-      // Usar dados de exemplo
       setBis(sampleData)
       setFilteredBis(sampleData)
       setAreas(initialAreas)
@@ -198,11 +207,9 @@ const BiManagementSystem = () => {
     }
   }, [])
 
-  // Efeito para controlar a visibilidade do botão "Voltar ao Topo"
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 200) {
-        // Mostra o botão após rolar 200px
         setShowScrollToTopButton(true)
       } else {
         setShowScrollToTopButton(false)
@@ -257,17 +264,16 @@ const BiManagementSystem = () => {
       }
     }
 
+    // Lógica de filtro para múltiplas áreas
     if (area !== "all") {
-      filtered = filtered.filter((bi) => bi.area === area)
+      filtered = filtered.filter((bi) => bi.area.includes(area))
     }
 
-    // Lógica de filtro por mês e ano
     if (month !== "all" || year !== "all") {
       filtered = filtered.filter((bi) => {
         if (!bi.lastUpdate) return false
-        // Adiciona 'T00:00:00' para garantir que a data seja interpretada no fuso horário local
         const biDate = new Date(bi.lastUpdate + "T00:00:00")
-        const biMonth = (biDate.getMonth() + 1).toString().padStart(2, "0") // getMonth é 0-indexed
+        const biMonth = (biDate.getMonth() + 1).toString().padStart(2, "0")
         const biYear = biDate.getFullYear().toString()
 
         const matchesMonth = month === "all" || biMonth === month
@@ -277,7 +283,6 @@ const BiManagementSystem = () => {
       })
     }
 
-    // Novo filtro de Criticidade
     if (criticality !== "all") {
       filtered = filtered.filter((bi) => bi.criticality === criticality)
     }
@@ -373,8 +378,11 @@ const BiManagementSystem = () => {
   }
 
   const handleDeleteArea = (id: number) => {
-    // Verificar se a área está sendo usada por algum BI
-    const areaInUse = bis.some((bi) => bi.area === areas.find((a) => a.id === id)?.name)
+    const areaToDelete = areas.find((a) => a.id === id)
+    if (!areaToDelete) return
+
+    // Verificar se a área está sendo usada por algum BI (agora verifica em arrays)
+    const areaInUse = bis.some((bi) => bi.area.includes(areaToDelete.name))
 
     if (areaInUse) {
       alert("Esta área não pode ser excluída pois está sendo utilizada por um ou mais BIs.")
@@ -389,7 +397,6 @@ const BiManagementSystem = () => {
   }
 
   const handleExport = () => {
-    // Exporta TODOS os BIs e Áreas, não apenas os filtrados, para um backup completo.
     const exportData = {
       bis: bis,
       areas: areas,
@@ -475,11 +482,11 @@ const BiManagementSystem = () => {
     )
   }
 
-  const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel }) => {
+  const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
     const [formData, setFormData] = useState<Omit<BiItem, "id">>({
       name: bi?.name || "",
       owner: bi?.owner || "",
-      area: bi?.area || "",
+      area: bi?.area || [], // Inicializa como array vazio
       status: bi?.status || "Atualizado",
       lastUpdate: bi?.lastUpdate || "",
       observations: bi?.observations || "",
@@ -488,13 +495,27 @@ const BiManagementSystem = () => {
     })
 
     const handleSubmit = () => {
-      if (formData.name && formData.area) {
+      if (formData.name && formData.area.length > 0) {
+        // Valida se pelo menos uma área foi selecionada
         if (bi) {
           onSave({ ...formData, id: bi.id })
         } else {
           onSave(formData as BiItem)
         }
+      } else {
+        alert("Por favor, preencha o nome do BI e selecione pelo menos uma área.")
       }
+    }
+
+    const toggleAreaSelection = (areaName: string) => {
+      setFormData((prev) => {
+        const currentAreas = prev.area || []
+        if (currentAreas.includes(areaName)) {
+          return { ...prev, area: currentAreas.filter((a) => a !== areaName) }
+        } else {
+          return { ...prev, area: [...currentAreas, areaName] }
+        }
+      })
     }
 
     return (
@@ -527,19 +548,27 @@ const BiManagementSystem = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Área/Sistema *</label>
-                <select
-                  value={formData.area}
-                  onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Selecione a área</option>
-                  {areas.map((area) => (
-                    <option key={area.id} value={area.name}>
-                      {area.name}
-                    </option>
-                  ))}
-                </select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between bg-transparent">
+                      {formData.area.length > 0 ? formData.area.join(", ") : "Selecione a(s) área(s)"}
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                    <DropdownMenuLabel>Selecione as Áreas</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {areas.map((area) => (
+                      <DropdownMenuCheckboxItem
+                        key={area.id}
+                        checked={formData.area.includes(area.name)}
+                        onCheckedChange={() => toggleAreaSelection(area.name)}
+                      >
+                        {area.name}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <div>
@@ -642,29 +671,30 @@ const BiManagementSystem = () => {
         const content = e.target?.result as string
         const importedData = JSON.parse(content)
 
-        // Validar estrutura dos dados
         if (!importedData || !Array.isArray(importedData.bis) || !Array.isArray(importedData.areas)) {
           alert("Arquivo inválido. Por favor, use um arquivo exportado pelo sistema com a estrutura correta.")
           return
         }
 
-        // Mesclar BIs
         const currentBisMap = new Map<number, BiItem>(bis.map((bi) => [bi.id, bi]))
         importedData.bis.forEach((importedBi: BiItem) => {
-          currentBisMap.set(importedBi.id, importedBi) // Sobrescreve se existe, adiciona se novo
+          // Ensure area is an array, even if imported as string (for backward compatibility)
+          if (typeof importedBi.area === "string") {
+            importedBi.area = [importedBi.area]
+          }
+          currentBisMap.set(importedBi.id, importedBi)
         })
         const mergedBis = Array.from(currentBisMap.values())
 
-        // Mesclar Áreas
         const currentAreasMap = new Map<number, Area>(areas.map((area) => [area.id, area]))
         importedData.areas.forEach((importedArea: Area) => {
-          currentAreasMap.set(importedArea.id, importedArea) // Sobrescreve se existe, adiciona se novo
+          currentAreasMap.set(importedArea.id, importedArea)
         })
         const mergedAreas = Array.from(currentAreasMap.values())
 
         setBis(mergedBis)
         setAreas(mergedAreas)
-        setFilteredBis(mergedBis) // Re-aplica filtros aos novos dados mesclados
+        setFilteredBis(mergedBis)
         calculateStats(mergedBis)
         saveToLocalStorage(mergedBis, mergedAreas)
 
@@ -678,7 +708,6 @@ const BiManagementSystem = () => {
     }
     reader.readAsText(file)
 
-    // Limpar o input para permitir reimportar o mesmo arquivo
     event.target.value = ""
   }
 
@@ -703,7 +732,9 @@ const BiManagementSystem = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
-      <div className="max-w-[100rem] mx-auto flex-grow w-full">
+      <div className="max-w-full mx-auto flex-grow w-full px-4 md:px-6">
+        {" "}
+        {/* Ajustado para max-w-full e padding */}
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6 relative">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
@@ -832,7 +863,6 @@ const BiManagementSystem = () => {
               <option value="no_owner">Sem Responsável</option>
             </select>
 
-            {/* Novo filtro de Mês */}
             <select
               value={filterMonth}
               onChange={(e) => handleMonthFilter(e.target.value)}
@@ -853,7 +883,6 @@ const BiManagementSystem = () => {
               <option value="12">Dezembro</option>
             </select>
 
-            {/* Novo filtro de Ano */}
             <select
               value={filterYear}
               onChange={(e) => handleYearFilter(e.target.value)}
@@ -867,7 +896,6 @@ const BiManagementSystem = () => {
               ))}
             </select>
 
-            {/* Novo filtro de Criticidade */}
             <select
               value={filterCriticality}
               onChange={(e) => handleCriticalityFilter(e.target.value)}
@@ -880,7 +908,6 @@ const BiManagementSystem = () => {
             </select>
           </div>
         </div>
-
         {/* BIs List */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -894,7 +921,7 @@ const BiManagementSystem = () => {
                     Responsável
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Área
+                    Área(s)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -934,7 +961,7 @@ const BiManagementSystem = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{bi.area}</span>
+                      <span className="text-sm text-gray-900">{bi.area.join(", ")}</span> {/* Exibe múltiplas áreas */}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -1011,9 +1038,9 @@ const BiManagementSystem = () => {
       </div>
 
       {/* Add/Edit Forms */}
-      {showAddForm && <BiForm onSave={handleAddBi} onCancel={() => setShowAddForm(false)} />}
+      {showAddForm && <BiForm onSave={handleAddBi} onCancel={() => setShowAddForm(false)} areas={areas} />}
 
-      {editingBi && <BiForm bi={editingBi} onSave={handleEditBi} onCancel={() => setEditingBi(null)} />}
+      {editingBi && <BiForm bi={editingBi} onSave={handleEditBi} onCancel={() => setEditingBi(null)} areas={areas} />}
 
       {/* Area Management */}
       {showAreaManagement && (

@@ -48,7 +48,7 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
     lastUpdate: bi?.lastUpdate || "",
     observations: bi?.observations || "",
     usage: bi?.usage || "Mensal",
-    criticality: bi?.criticality || "Média",
+    criticality: bi?.criticality || "", // Alterado para string vazia
     description: bi?.description || "",
   })
 
@@ -195,6 +195,7 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
                 onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="">Não Aplicável</option> {/* Nova opção */}
                 <option value="Alta">Alta</option>
                 <option value="Média">Média</option>
                 <option value="Baixa">Baixa</option>

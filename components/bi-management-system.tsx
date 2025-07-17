@@ -212,6 +212,30 @@ const BiManagementSystem = (): ReactElement => {
       status: "Sem responsável",
       lastUpdate: "2024-05-20",
       observations: "BI órfão, necessita definir responsável",
+      criticality: "", // Exemplo de BI sem criticidade
+    },
+    {
+      id: 6,
+      name: "Relatório de Produção Diária",
+      owner: "Carlos Mendes",
+      area: ["Produção"],
+      status: "Atualizado",
+      lastUpdate: "2024-07-10",
+      observations: "Monitoramento de linha de produção",
+      usage: "Diário",
+      criticality: "", // Exemplo de BI sem criticidade
+      pages: [
+        {
+          id: 1,
+          name: "Visão de Turnos",
+          owner: "Carlos Mendes",
+          description: "Desempenho por turno",
+          status: "Atualizado",
+          lastUpdate: "2024-07-10",
+          usage: "Diário",
+          criticality: "", // Exemplo de página sem criticidade
+        },
+      ],
     },
   ]
 
@@ -283,7 +307,12 @@ const BiManagementSystem = (): ReactElement => {
     }
 
     if (criticality !== "all") {
-      filtered = filtered.filter((bi) => bi.criticality === criticality)
+      filtered = filtered.filter((bi) => {
+        if (criticality === "Não Aplicável") {
+          return !bi.criticality || bi.criticality === ""
+        }
+        return bi.criticality === criticality
+      })
     }
 
     // Lógica de ordenação
@@ -480,7 +509,8 @@ const BiManagementSystem = (): ReactElement => {
   const getCriticalityColor = (criticality: string) => {
     if (criticality === "Alta") return "bg-red-100 text-red-800"
     if (criticality === "Média") return "bg-yellow-100 text-yellow-800"
-    return "bg-green-100 text-green-800"
+    if (criticality === "Baixa") return "bg-green-100 text-green-800"
+    return "bg-gray-100 text-gray-800" // Cor para "Não Aplicável" ou vazio
   }
 
   const handleAddBi = (newBi: Omit<BiItem, "id">) => {
@@ -819,6 +849,7 @@ const BiManagementSystem = (): ReactElement => {
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Todas as Criticidades</option>
+              <option value="">Não Aplicável</option> {/* Nova opção de filtro */}
               <option value="Alta">Alta</option>
               <option value="Média">Média</option>
               <option value="Baixa">Baixa</option>
@@ -928,7 +959,7 @@ const BiManagementSystem = (): ReactElement => {
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
                         >
-                          {bi.criticality}
+                          {bi.criticality || "Não Aplicável"} {/* Exibe "Não Aplicável" se vazio */}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
@@ -1008,11 +1039,11 @@ const BiManagementSystem = (): ReactElement => {
                           </td>
                           <td className="px-6 py-3 text-sm text-gray-700">{page.usage || "-"}</td>
                           <td className="px-6 py-3">
-                            {page.criticality && (
+                            {page.criticality !== undefined && ( // Verifica se a propriedade existe
                               <span
                                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
                               >
-                                {page.criticality}
+                                {page.criticality || "Não Aplicável"} {/* Exibe "Não Aplicável" se vazio */}
                               </span>
                             )}
                           </td>

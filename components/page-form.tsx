@@ -31,7 +31,7 @@ const PageForm: React.FC<PageFormProps> = ({ biId, page, onSave, onCancel }) => 
     lastUpdate: page?.lastUpdate || "",
     observations: page?.observations || "",
     usage: page?.usage || "Mensal",
-    criticality: page?.criticality || "Média",
+    criticality: page?.criticality || "",
   })
 
   const handleSubmit = () => {
@@ -125,6 +125,7 @@ const PageForm: React.FC<PageFormProps> = ({ biId, page, onSave, onCancel }) => 
                 onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="">Não Aplicável</option>
                 <option value="Alta">Alta</option>
                 <option value="Média">Média</option>
                 <option value="Baixa">Baixa</option>

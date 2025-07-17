@@ -20,6 +20,7 @@ import {
   BarChart3,
   Building2,
   ArrowUp,
+  ArrowDown,
   ChevronDown,
   ChevronRight,
   ArrowUpDown,
@@ -123,6 +124,7 @@ const BiManagementSystem = (): ReactElement => {
     outdatedPages: 0,
   })
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
+  const [showFloatingBar, setShowFloatingBar] = useState(false)
 
   const [areas, setAreas] = useState<Area[]>([])
   const [showAreaManagement, setShowAreaManagement] = useState(false)
@@ -384,11 +386,15 @@ const BiManagementSystem = (): ReactElement => {
   // Efeito para controlar a visibilidade do botão "Voltar ao Topo"
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 200) {
-        setShowScrollToTopButton(true)
-      } else {
-        setShowScrollToTopButton(false)
-      }
+      const scrollY = window.scrollY
+      const windowHeight = window.innerHeight
+      const documentHeight = document.documentElement.scrollHeight
+
+      // Mostrar barra flutuante quando não estiver no topo
+      setShowFloatingBar(scrollY > 100)
+
+      // Mostrar botão "Voltar ao Topo" quando rolar mais de 200px
+      setShowScrollToTopButton(scrollY > 200)
     }
 
     window.addEventListener("scroll", handleScroll)
@@ -635,6 +641,13 @@ const BiManagementSystem = (): ReactElement => {
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
+      behavior: "smooth",
+    })
+  }
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
       behavior: "smooth",
     })
   }
@@ -1084,25 +1097,45 @@ const BiManagementSystem = (): ReactElement => {
             </div>
           )}
 
-          {/* BI Counter and Scroll to Top Button */}
-          <div className="flex justify-between items-center p-4 text-sm text-gray-600 border-t border-gray-200">
+          {/* BI Counter - versão simplificada no final da tabela */}
+          <div className="p-4 text-sm text-gray-600 border-t border-gray-200 text-center">
             <span>
               Mostrando {filteredBis.length} de {bis.length} BIs
             </span>
-            {showScrollToTopButton && (
-              <Button
-                onClick={scrollToTop}
-                className="flex items-center px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-xs"
-                variant="outline"
-                size="sm"
-              >
-                <ArrowUp className="h-4 w-4 mr-1" />
-                Voltar ao Topo
-              </Button>
-            )}
           </div>
         </div>
       </div>
+
+      {/* Barra Flutuante de Navegação */}
+      {showFloatingBar && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-4 border border-gray-200">
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              {filteredBis.length} de {bis.length} BIs
+            </span>
+            <div className="flex space-x-2">
+              <Button
+                onClick={scrollToTop}
+                className="flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 text-xs"
+                variant="ghost"
+                size="sm"
+              >
+                <ArrowUp className="h-3 w-3 mr-1" />
+                Início
+              </Button>
+              <Button
+                onClick={scrollToBottom}
+                className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-xs"
+                variant="ghost"
+                size="sm"
+              >
+                <ArrowDown className="h-3 w-3 mr-1" />
+                Fim
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Forms */}
       {showAddForm && <BiForm onSave={handleAddBi} onCancel={() => setShowAddForm(false)} areas={areas} />}
@@ -1144,7 +1177,7 @@ const BiManagementSystem = (): ReactElement => {
       {/* Footer */}
       <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
         <p>
-          Desenvolvido por
+          Desenvolvido por{" "}
           <a
             href="https://github.com/GiovanneRocha"
             target="_blank"

@@ -2,88 +2,59 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
 
-interface BiItem {
+interface Page {
   id: number
   name: string
-  owner: string
-  area: string[]
-  status: string
-  lastUpdate: string
-  observations: string
-  usage: string
-  criticality: string
-  description: string
-}
-
-interface Area {
-  id: number
-  name: string
+  owner?: string
   description?: string
+  status?: string
+  lastUpdate?: string
+  observations?: string
+  usage?: string
+  criticality?: string
 }
 
-interface BiFormProps {
-  bi?: BiItem
-  onSave: (bi: BiItem) => void
+interface PageFormProps {
+  biId: number
+  page?: Page
+  onSave: (biId: number, page: Page | Omit<Page, "id">) => void
   onCancel: () => void
-  areas: Area[]
 }
 
-const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
-  const [formData, setFormData] = useState<Omit<BiItem, "id">>({
-    name: bi?.name || "",
-    owner: bi?.owner || "",
-    area: bi?.area || [],
-    status: bi?.status || "Atualizado",
-    lastUpdate: bi?.lastUpdate || "",
-    observations: bi?.observations || "",
-    usage: bi?.usage || "Mensal",
-    criticality: bi?.criticality || "Média",
-    description: bi?.description || "",
+const PageForm: React.FC<PageFormProps> = ({ biId, page, onSave, onCancel }) => {
+  const [formData, setFormData] = useState<Omit<Page, "id">>({
+    name: page?.name || "",
+    owner: page?.owner || "",
+    description: page?.description || "",
+    status: page?.status || "Atualizado",
+    lastUpdate: page?.lastUpdate || "",
+    observations: page?.observations || "",
+    usage: page?.usage || "Mensal",
+    criticality: page?.criticality || "Média",
   })
 
   const handleSubmit = () => {
-    if (formData.name && formData.area.length > 0) {
-      if (bi) {
-        onSave({ ...formData, id: bi.id })
+    if (formData.name.trim()) {
+      if (page) {
+        onSave(biId, { ...formData, id: page.id })
       } else {
-        onSave(formData as BiItem)
+        onSave(biId, formData)
       }
     } else {
-      alert("Por favor, preencha o nome do BI e selecione pelo menos uma área.")
+      alert("Por favor, preencha o nome da página.")
     }
-  }
-
-  const toggleAreaSelection = (areaName: string) => {
-    setFormData((prev) => {
-      const currentAreas = prev.area || []
-      if (currentAreas.includes(areaName)) {
-        return { ...prev, area: currentAreas.filter((a) => a !== areaName) }
-      } else {
-        return { ...prev, area: [...currentAreas, areaName] }
-      }
-    })
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">{bi ? "Editar BI" : "Adicionar Novo BI"}</h3>
+        <h3 className="text-lg font-semibold mb-4">{page ? "Editar Página" : "Adicionar Nova Página"}</h3>
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome do BI *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Página *</label>
               <input
                 type="text"
                 value={formData.name}
@@ -93,19 +64,8 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
               />
             </div>
 
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descrição do Arquivo</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Descrição detalhada do arquivo Power BI..."
-              />
-            </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Responsável/Dono</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Responsável</label>
               <input
                 type="text"
                 value={formData.owner}
@@ -115,41 +75,11 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Área/Sistema *</label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-transparent">
-                    <span className="truncate max-w-[calc(100%-1.5rem)]">
-                      {" "}
-                      {/* Added truncate and max-width */}
-                      {formData.area.length > 0 ? formData.area.join(", ") : "Selecione a(s) área(s)"}
-                    </span>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                  <DropdownMenuLabel>Selecione as Áreas</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {areas.map((area) => (
-                    <DropdownMenuCheckboxItem
-                      key={area.id}
-                      checked={formData.area.includes(area.name)}
-                      onCheckedChange={() => toggleAreaSelection(area.name)}
-                    >
-                      {area.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
               >
                 <option value="Atualizado">Atualizado</option>
                 <option value="Desatualizado">Desatualizado</option>
@@ -157,7 +87,7 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
                 <option value="Descontinuado">Descontinuado</option>
                 <option value="Sem responsável">Sem responsável</option>
                 <option value="Sem permissão">Sem permissão</option>
-                <option value="Não encontrado">Não encontrado</option> {/* New status */}
+                <option value="Não encontrado">Não encontrado</option>
               </select>
             </div>
 
@@ -203,6 +133,17 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Descrição da página..."
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
             <textarea
               value={formData.observations}
@@ -226,7 +167,7 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
               onClick={handleSubmit}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
-              {bi ? "Salvar Alterações" : "Adicionar BI"}
+              {page ? "Salvar Alterações" : "Adicionar Página"}
             </button>
           </div>
         </div>
@@ -235,4 +176,4 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
   )
 }
 
-export default BiForm
+export default PageForm

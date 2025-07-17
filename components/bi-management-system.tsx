@@ -1,6 +1,8 @@
 "use client"
 
-import type React from "react"
+import React from "react"
+
+import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
 import {
   Upload,
@@ -17,23 +19,40 @@ import {
   BarChart3,
   Building2,
   ArrowUp,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import AreaManagement from "./area-management"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import BiForm from "./bi-form" // Importar BiForm do novo arquivo
 import { handleExport } from "@/utils/export-utils" // Importar handleExport do novo arquivo
+import PageForm from "./page-form"
+
+interface Page {
+  id: number
+  name: string
+  owner?: string
+  description?: string
+  status?: string
+  lastUpdate?: string
+  observations?: string
+  usage?: string
+  criticality?: string
+}
 
 interface BiItem {
   id: number
   name: string
   owner: string
-  area: string[] // Alterado para array de strings
+  area: string[]
   status: string
   lastUpdate: string
   observations: string
   usage: string
   criticality: string
+  description?: string
+  pages?: Page[]
 }
 
 interface Stats {
@@ -41,6 +60,10 @@ interface Stats {
   updated: number
   outdated: number
   noOwner: number
+  totalPages: number
+  updatedPages: number
+  outdatedPages: number
+  noOwnerPages: number
 }
 
 interface Area {
@@ -77,7 +100,7 @@ const loadFromLocalStorage = (): { bis: BiItem[]; areas: Area[] } => {
   }
 }
 
-const BiManagementSystem = () => {
+const BiManagementSystem = (): ReactElement => {
   const [bis, setBis] = useState<BiItem[]>([])
   const [filteredBis, setFilteredBis] = useState<BiItem[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -93,11 +116,18 @@ const BiManagementSystem = () => {
     updated: 0,
     outdated: 0,
     noOwner: 0,
+    totalPages: 0,
+    updatedPages: 0,
+    outdatedPages: 0,
   })
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
 
   const [areas, setAreas] = useState<Area[]>([])
   const [showAreaManagement, setShowAreaManagement] = useState(false)
+  const [expandedBis, setExpandedBis] = useState<Set<number>>(new Set())
+  const [showAddPageForm, setShowAddPageForm] = useState(false)
+  const [editingPage, setEditingPage] = useState<{ biId: number; page: Page } | null>(null)
+  const [selectedBiForPage, setSelectedBiForPage] = useState<number | null>(null)
 
   // Dados de exemplo baseados na planilha
   const sampleData: BiItem[] = [
@@ -105,12 +135,35 @@ const BiManagementSystem = () => {
       id: 1,
       name: "Visão Gerencial - Estoques VMSA",
       owner: "Gabriel Lauer Oliveira",
-      area: ["BW"], // Alterado para array
+      area: ["BW"],
       status: "Atualizado",
       lastUpdate: "2024-01-15",
       observations: "Formatação do layout",
       usage: "Mensal",
       criticality: "Alta",
+      description: "Dashboard principal para análise de estoques da VMSA",
+      pages: [
+        {
+          id: 1,
+          name: "Visão Geral",
+          owner: "Gabriel Lauer Oliveira",
+          description: "Página principal com métricas gerais",
+          status: "Atualizado",
+          lastUpdate: "2024-01-15",
+          usage: "Diário",
+          criticality: "Alta",
+        },
+        {
+          id: 2,
+          name: "Detalhamento por Produto",
+          owner: "Maria Silva",
+          description: "Análise detalhada por categoria de produto",
+          status: "Em revisão",
+          lastUpdate: "2024-01-10",
+          usage: "Semanal",
+          criticality: "Média",
+        },
+      ],
     },
     {
       id: 2,
@@ -126,7 +179,7 @@ const BiManagementSystem = () => {
     {
       id: 3,
       name: "Dashboard Preços Entrada de Pedidos",
-      owner: "Marcio Tagata Motitsuki",
+      owner: "",
       area: ["2368_Controladoria_ABUB"],
       status: "Desatualizado desde 06/08/24",
       lastUpdate: "2024-08-06",
@@ -256,12 +309,79 @@ const BiManagementSystem = () => {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  const toggleBiExpansion = (biId: number) => {
+    const newExpanded = new Set(expandedBis)
+    if (newExpanded.has(biId)) {
+      newExpanded.delete(biId)
+    } else {
+      newExpanded.add(biId)
+    }
+    setExpandedBis(newExpanded)
+  }
+
+  const handleAddPage = (biId: number, newPage: Omit<Page, "id">) => {
+    const pageWithId: Page = { ...newPage, id: Date.now() }
+    const updatedBis = bis.map((bi) => (bi.id === biId ? { ...bi, pages: [...(bi.pages || []), pageWithId] } : bi))
+    setBis(updatedBis)
+    saveToLocalStorage(updatedBis, areas)
+    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+    calculateStats(updatedBis)
+    setShowAddPageForm(false)
+    setSelectedBiForPage(null)
+  }
+
+  const handleEditPage = (biId: number, updatedPage: Page) => {
+    const updatedBis = bis.map((bi) =>
+      bi.id === biId
+        ? {
+            ...bi,
+            pages: bi.pages?.map((page) => (page.id === updatedPage.id ? updatedPage : page)) || [],
+          }
+        : bi,
+    )
+    setBis(updatedBis)
+    saveToLocalStorage(updatedBis, areas)
+    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+    calculateStats(updatedBis)
+    setEditingPage(null)
+  }
+
+  const handleDeletePage = (biId: number, pageId: number) => {
+    if (window.confirm("Tem certeza que deseja excluir esta página?")) {
+      const updatedBis = bis.map((bi) =>
+        bi.id === biId ? { ...bi, pages: bi.pages?.filter((page) => page.id !== pageId) || [] } : bi,
+      )
+      setBis(updatedBis)
+      saveToLocalStorage(updatedBis, areas)
+      applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+      calculateStats(updatedBis)
+    }
+  }
+
   const calculateStats = (data: BiItem[]) => {
+    const totalPages = data.reduce((sum, bi) => sum + (bi.pages?.length || 0), 0)
+    const updatedPages = data.reduce(
+      (sum, bi) => sum + (bi.pages?.filter((page) => page.status === "Atualizado").length || 0),
+      0,
+    )
+    const outdatedPages = data.reduce(
+      (sum, bi) => sum + (bi.pages?.filter((page) => page.status?.includes("Desatualizado")).length || 0),
+      0,
+    )
+    const noOwnerPages = data.reduce(
+      (sum, bi) => sum + (bi.pages?.filter((page) => !page.owner || page.owner === "").length || 0),
+      0,
+    )
+
     const newStats: Stats = {
       total: data.length,
       updated: data.filter((bi) => bi.status === "Atualizado").length,
       outdated: data.filter((bi) => bi.status.includes("Desatualizado")).length,
       noOwner: data.filter((bi) => !bi.owner || bi.owner === "").length,
+      totalPages,
+      updatedPages,
+      outdatedPages,
+      noOwnerPages,
     }
     setStats(newStats)
   }
@@ -502,40 +622,49 @@ const BiManagementSystem = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            <div className="bg-blue-50 p-3 rounded-lg">
               <div className="flex items-center">
-                <BarChart3 className="h-8 w-8 text-blue-600 mr-3" />
+                <BarChart3 className="h-7 w-7 text-blue-600 mr-2" />
                 <div>
-                  <p className="text-sm font-medium text-blue-600">Total de BIs</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+                  <p className="text-xs font-medium text-blue-600">Total de BIs</p>
+                  <p className="text-xl font-bold text-blue-900">{stats.total}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
+            <div className="bg-purple-50 p-3 rounded-lg">
               <div className="flex items-center">
-                <CheckCircle className="h-8 w-8 text-green-600 mr-3" />
+                <FileText className="h-7 w-7 text-purple-600 mr-2" />
                 <div>
-                  <p className="text-sm font-medium text-green-600">Atualizados</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.updated}</p>
+                  <p className="text-xs font-medium text-purple-600">Total de Páginas</p>
+                  <p className="text-xl font-bold text-purple-900">{stats.totalPages}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-red-50 p-4 rounded-lg">
+            <div className="bg-green-50 p-3 rounded-lg">
               <div className="flex items-center">
-                <XCircle className="h-8 w-8 text-red-600 mr-3" />
+                <CheckCircle className="h-7 w-7 text-green-600 mr-2" />
                 <div>
-                  <p className="text-sm font-medium text-red-600">Desatualizados</p>
-                  <p className="text-2xl font-bold text-red-900">{stats.outdated}</p>
+                  <p className="text-xs font-medium text-green-600">Atualizados</p>
+                  <p className="text-xl font-bold text-green-900">{stats.updated}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-yellow-50 p-4 rounded-lg">
+            <div className="bg-red-50 p-3 rounded-lg">
               <div className="flex items-center">
-                <Users className="h-8 w-8 text-yellow-600 mr-3" />
+                <XCircle className="h-7 w-7 text-red-600 mr-2" />
                 <div>
-                  <p className="text-sm font-medium text-yellow-600">Sem Responsável</p>
-                  <p className="text-2xl font-bold text-yellow-900">{stats.noOwner}</p>
+                  <p className="text-xs font-medium text-red-600">Desatualizados</p>
+                  <p className="text-xl font-bold text-red-900">{stats.outdated}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-yellow-50 p-3 rounded-lg">
+              <div className="flex items-center">
+                <Users className="h-7 w-7 text-yellow-600 mr-2" />
+                <div>
+                  <p className="text-xs font-medium text-yellow-600">Sem Responsável</p>
+                  <p className="text-xl font-bold text-yellow-900">{stats.noOwner}</p>
                 </div>
               </div>
             </div>
@@ -661,69 +790,175 @@ const BiManagementSystem = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredBis.map((bi) => (
-                  <tr key={bi.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-gray-400 mr-2" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{bi.name}</div>
-                          {bi.observations && (
-                            <div className="text-sm text-gray-500 truncate max-w-xs">{bi.observations}</div>
-                          )}
+                  <React.Fragment key={bi.id}>
+                    {/* Linha do BI principal */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <button
+                            onClick={() => toggleBiExpansion(bi.id)}
+                            className="mr-2 p-1 hover:bg-gray-200 rounded"
+                          >
+                            {expandedBis.has(bi.id) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </button>
+                          <FileText className="h-5 w-5 text-gray-400 mr-2" />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{bi.name}</div>
+                            {bi.description && (
+                              <div className="text-sm text-gray-500 truncate max-w-xs">{bi.description}</div>
+                            )}
+                            {bi.observations && (
+                              <div className="text-xs text-gray-400 truncate max-w-xs">{bi.observations}</div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">{bi.owner || "Sem responsável"}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{bi.area.join(", ")}</span> {/* Exibe múltiplas áreas */}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bi.status)}`}
-                      >
-                        {getStatusIcon(bi.status)}
-                        <span className="ml-1">{bi.status}</span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {bi.lastUpdate ? new Date(bi.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR") : "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bi.usage}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
-                      >
-                        {bi.criticality}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={() => setEditingBi(bi)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Editar"
-                          variant="ghost"
-                          size="icon"
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Users className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-900">{bi.owner || "Sem responsável"}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900">{bi.area.join(", ")}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bi.status)}`}
                         >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => handleDeleteBi(bi.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Excluir"
-                          variant="ghost"
-                          size="icon"
+                          {getStatusIcon(bi.status)}
+                          <span className="ml-1">{bi.status}</span>
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {bi.lastUpdate ? new Date(bi.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR") : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bi.usage}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
+                          {bi.criticality}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={() => {
+                              setSelectedBiForPage(bi.id)
+                              setShowAddPageForm(true)
+                            }}
+                            className="text-green-600 hover:text-green-900"
+                            title="Adicionar Página"
+                            variant="ghost"
+                            size="icon"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={() => setEditingBi(bi)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Editar"
+                            variant="ghost"
+                            size="icon"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteBi(bi.id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Excluir"
+                            variant="ghost"
+                            size="icon"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Linhas das páginas (quando expandido) */}
+                    {expandedBis.has(bi.id) &&
+                      bi.pages?.map((page) => (
+                        <tr key={`${bi.id}-${page.id}`} className="bg-gray-25 hover:bg-gray-50">
+                          <td className="px-6 py-3">
+                            <div className="flex items-center pl-8">
+                              <div className="w-4 h-4 mr-2"></div>
+                              <FileText className="h-4 w-4 text-gray-300 mr-2" />
+                              <div>
+                                <div className="text-sm text-gray-700">{page.name}</div>
+                                {page.description && (
+                                  <div className="text-xs text-gray-500 truncate max-w-xs">{page.description}</div>
+                                )}
+                                {page.observations && (
+                                  <div className="text-xs text-gray-400 truncate max-w-xs">{page.observations}</div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <Users className="h-3 w-3 text-gray-400 mr-2" />
+                              <span className="text-sm text-gray-700">{page.owner || "Sem responsável"}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap">
+                            <span className="text-sm text-gray-500">-</span>
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap">
+                            {page.status && (
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(page.status)}`}
+                              >
+                                {getStatusIcon(page.status)}
+                                <span className="ml-1">{page.status}</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {page.lastUpdate
+                              ? new Date(page.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR")
+                              : "-"}
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">{page.usage || "-"}</td>
+                          <td className="px-6 py-3 whitespace-nowrap">
+                            {page.criticality && (
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
+                              >
+                                {page.criticality}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
+                            <div className="flex space-x-2">
+                              <Button
+                                onClick={() => setEditingPage({ biId: bi.id, page })}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Editar Página"
+                                variant="ghost"
+                                size="icon"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                onClick={() => handleDeletePage(bi.id, page.id)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Excluir Página"
+                                variant="ghost"
+                                size="icon"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -772,10 +1007,31 @@ const BiManagementSystem = () => {
         />
       )}
 
+      {/* Page Forms */}
+      {showAddPageForm && selectedBiForPage && (
+        <PageForm
+          biId={selectedBiForPage}
+          onSave={handleAddPage}
+          onCancel={() => {
+            setShowAddPageForm(false)
+            setSelectedBiForPage(null)
+          }}
+        />
+      )}
+
+      {editingPage && (
+        <PageForm
+          biId={editingPage.biId}
+          page={editingPage.page}
+          onSave={handleEditPage}
+          onCancel={() => setEditingPage(null)}
+        />
+      )}
+
       {/* Footer */}
       <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
         <p>
-          Desenvolvido por{" "}
+          Desenvolvido por
           <a
             href="https://github.com/GiovanneRocha"
             target="_blank"

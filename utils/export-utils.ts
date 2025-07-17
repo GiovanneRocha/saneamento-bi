@@ -1,5 +1,17 @@
 // utils/export-utils.ts
 
+interface Page {
+  id: number
+  name: string
+  owner?: string
+  description?: string
+  status?: string
+  lastUpdate?: string
+  observations?: string
+  usage?: string
+  criticality?: string
+}
+
 interface BiItem {
   id: number
   name: string
@@ -10,6 +22,8 @@ interface BiItem {
   observations: string
   usage: string
   criticality: string
+  description?: string
+  pages?: Page[]
 }
 
 interface Area {

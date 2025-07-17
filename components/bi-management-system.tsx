@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { ChevronUp } from "lucide-react" // Import ChevronUp
 
 import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
@@ -21,6 +22,7 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronRight,
+  ArrowUpDown,
 } from "lucide-react"
 import AreaManagement from "./area-management"
 import Image from "next/image"
@@ -119,6 +121,7 @@ const BiManagementSystem = (): ReactElement => {
     totalPages: 0,
     updatedPages: 0,
     outdatedPages: 0,
+    noOwnerPages: 0,
   })
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
 
@@ -128,6 +131,10 @@ const BiManagementSystem = (): ReactElement => {
   const [showAddPageForm, setShowAddPageForm] = useState(false)
   const [editingPage, setEditingPage] = useState<{ biId: number; page: Page } | null>(null)
   const [selectedBiForPage, setSelectedBiForPage] = useState<number | null>(null)
+
+  // Estados para ordenação
+  const [sortColumn, setSortColumn] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | "none">("none")
 
   // Dados de exemplo baseados na planilha
   const sampleData: BiItem[] = [
@@ -222,15 +229,18 @@ const BiManagementSystem = (): ReactElement => {
 
   // Refatorar applyFilters para aceitar os dados como argumento
   const applyFilters = (
-    dataToFilter: BiItem[], // Novo parâmetro
+    dataToFilter: BiItem[],
     search: string,
     status: string,
     area: string,
     month: string,
     year: string,
     criticality: string,
+    sortCol: string | null,
+    sortDir: "asc" | "desc" | "none",
   ) => {
-    let filtered = dataToFilter
+    // Sempre comece com uma cópia fresca dos dados originais para filtragem
+    let filtered = [...dataToFilter] // <--- CORREÇÃO AQUI: Cria uma cópia do array
 
     if (search) {
       filtered = filtered.filter(
@@ -249,10 +259,8 @@ const BiManagementSystem = (): ReactElement => {
       } else if (status === "no_owner") {
         filtered = filtered.filter((bi) => !bi.owner || bi.owner === "")
       } else if (status === "Sem permissão") {
-        // New status filter
         filtered = filtered.filter((bi) => bi.status === "Sem permissão")
       } else if (status === "Não encontrado") {
-        // New status filter
         filtered = filtered.filter((bi) => bi.status === "Não encontrado")
       }
     }
@@ -279,6 +287,31 @@ const BiManagementSystem = (): ReactElement => {
       filtered = filtered.filter((bi) => bi.criticality === criticality)
     }
 
+    // Lógica de ordenação
+    if (sortCol && sortDir !== "none") {
+      filtered.sort((a, b) => {
+        let valA: any
+        let valB: any
+
+        if (sortCol === "area") {
+          valA = a.area.join(", ").toLowerCase()
+          valB = b.area.join(", ").toLowerCase()
+        } else if (sortCol === "lastUpdate") {
+          valA = a.lastUpdate ? new Date(a.lastUpdate).getTime() : 0
+          valB = b.lastUpdate ? new Date(b.lastUpdate).getTime() : 0
+        } else {
+          valA = (a as any)[sortCol]?.toString().toLowerCase() || ""
+          valB = (b as any)[sortCol]?.toString().toLowerCase() || ""
+        }
+
+        if (valA < valB) return sortDir === "asc" ? -1 : 1
+        if (valA > valB) return sortDir === "asc" ? 1 : -1
+        return 0
+      })
+    }
+    // Se sortDir for "none", nenhuma ordenação explícita é aplicada,
+    // então a ordem será a ordem original de `bis` após a filtragem.
+
     setFilteredBis(filtered)
   }
 
@@ -291,9 +324,34 @@ const BiManagementSystem = (): ReactElement => {
     setBis(initialBis)
     setAreas(initialAreasData)
     // Chamar applyFilters com os dados iniciais carregados
-    applyFilters(initialBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
+    applyFilters(
+      initialBis,
+      searchTerm,
+      filterStatus,
+      filterArea,
+      filterMonth,
+      filterYear,
+      filterCriticality,
+      sortColumn,
+      sortDirection,
+    )
     calculateStats(initialBis)
   }, []) // Este useEffect só roda na montagem inicial
+
+  // Efeito para re-aplicar filtros e ordenação quando os estados de filtro/ordenação mudam
+  useEffect(() => {
+    applyFilters(
+      bis,
+      searchTerm,
+      filterStatus,
+      filterArea,
+      filterMonth,
+      filterYear,
+      filterCriticality,
+      sortColumn,
+      sortDirection,
+    )
+  }, [searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality, sortColumn, sortDirection, bis])
 
   // Efeito para controlar a visibilidade do botão "Voltar ao Topo"
   useEffect(() => {
@@ -324,7 +382,6 @@ const BiManagementSystem = (): ReactElement => {
     const updatedBis = bis.map((bi) => (bi.id === biId ? { ...bi, pages: [...(bi.pages || []), pageWithId] } : bi))
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     calculateStats(updatedBis)
     setShowAddPageForm(false)
     setSelectedBiForPage(null)
@@ -341,7 +398,6 @@ const BiManagementSystem = (): ReactElement => {
     )
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     calculateStats(updatedBis)
     setEditingPage(null)
   }
@@ -353,7 +409,6 @@ const BiManagementSystem = (): ReactElement => {
       )
       setBis(updatedBis)
       saveToLocalStorage(updatedBis, areas)
-      applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
       calculateStats(updatedBis)
     }
   }
@@ -388,32 +443,26 @@ const BiManagementSystem = (): ReactElement => {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
-    applyFilters(bis, term, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'bis' atual
   }
 
   const handleStatusFilter = (status: string) => {
     setFilterStatus(status)
-    applyFilters(bis, searchTerm, status, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'bis' atual
   }
 
   const handleAreaFilter = (area: string) => {
     setFilterArea(area)
-    applyFilters(bis, searchTerm, filterStatus, area, filterMonth, filterYear, filterCriticality) // Passar 'bis' atual
   }
 
   const handleMonthFilter = (month: string) => {
     setFilterMonth(month)
-    applyFilters(bis, searchTerm, filterStatus, filterArea, month, filterYear, filterCriticality) // Passar 'bis' atual
   }
 
   const handleYearFilter = (year: string) => {
     setFilterYear(year)
-    applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, year, filterCriticality) // Passar 'bis' atual
   }
 
   const handleCriticalityFilter = (criticality: string) => {
     setFilterCriticality(criticality)
-    applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, criticality) // Passar 'bis' atual
   }
 
   const getStatusColor = (status: string) => {
@@ -440,7 +489,6 @@ const BiManagementSystem = (): ReactElement => {
     const updatedBis = [...bis, biWithId]
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'updatedBis'
     calculateStats(updatedBis)
     setShowAddForm(false)
   }
@@ -449,7 +497,6 @@ const BiManagementSystem = (): ReactElement => {
     const updatedBis = bis.map((bi) => (bi.id === updatedBi.id ? updatedBi : bi))
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
-    applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'updatedBis'
     calculateStats(updatedBis)
     setEditingBi(null)
   }
@@ -459,7 +506,6 @@ const BiManagementSystem = (): ReactElement => {
       const updatedBis = bis.filter((bi) => bi.id !== id)
       setBis(updatedBis)
       saveToLocalStorage(updatedBis, areas)
-      applyFilters(updatedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'updatedBis'
       calculateStats(updatedBis)
     }
   }
@@ -476,7 +522,6 @@ const BiManagementSystem = (): ReactElement => {
     const updatedAreas = areas.map((area) => (area.id === updatedArea.id ? updatedArea : area))
     setAreas(updatedAreas)
     saveToLocalStorage(bis, updatedAreas)
-    applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     setShowAreaManagement(false) // Fechar o formulário de área após editar
   }
 
@@ -495,7 +540,6 @@ const BiManagementSystem = (): ReactElement => {
       const updatedAreas = areas.filter((area) => area.id !== id)
       setAreas(updatedAreas)
       saveToLocalStorage(bis, updatedAreas)
-      applyFilters(bis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality)
     }
   }
 
@@ -531,7 +575,6 @@ const BiManagementSystem = (): ReactElement => {
 
         setBis(mergedBis)
         setAreas(mergedAreas)
-        applyFilters(mergedBis, searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality) // Passar 'mergedBis'
         calculateStats(mergedBis)
         saveToLocalStorage(mergedBis, mergedAreas)
 
@@ -565,6 +608,33 @@ const BiManagementSystem = (): ReactElement => {
       top: 0,
       behavior: "smooth",
     })
+  }
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc")
+      } else if (sortDirection === "desc") {
+        setSortDirection("none")
+        setSortColumn(null) // Reset column when returning to original order
+      } else {
+        setSortDirection("asc")
+      }
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        return <ChevronUp className="ml-1 h-3 w-3" />
+      } else if (sortDirection === "desc") {
+        return <ChevronDown className="ml-1 h-3 w-3" />
+      }
+    }
+    return <ArrowUpDown className="ml-1 h-3 w-3 text-gray-400" />
   }
 
   return (
@@ -762,26 +832,47 @@ const BiManagementSystem = (): ReactElement => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nome do BI
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("name")}
+                  >
+                    <div className="flex items-center">Nome do BI {getSortIcon("name")}</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Responsável
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("owner")}
+                  >
+                    <div className="flex items-center">Responsável {getSortIcon("owner")}</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Área(s)
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("area")}
+                  >
+                    <div className="flex items-center">Área(s) {getSortIcon("area")}</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("status")}
+                  >
+                    <div className="flex items-center">Status {getSortIcon("status")}</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Última Atualização
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("lastUpdate")}
+                  >
+                    <div className="flex items-center">Última Atualização {getSortIcon("lastUpdate")}</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Uso
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("usage")}
+                  >
+                    <div className="flex items-center">Uso {getSortIcon("usage")}</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Criticidade
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("criticality")}
+                  >
+                    <div className="flex items-center">Criticidade {getSortIcon("criticality")}</div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações

@@ -121,7 +121,6 @@ const BiManagementSystem = (): ReactElement => {
     totalPages: 0,
     updatedPages: 0,
     outdatedPages: 0,
-    noOwnerPages: 0,
   })
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
 
@@ -899,25 +898,21 @@ const BiManagementSystem = (): ReactElement => {
                           <FileText className="h-5 w-5 text-gray-400 mr-2" />
                           <div>
                             <div className="text-sm font-medium text-gray-900">{bi.name}</div>
-                            {bi.description && (
-                              <div className="text-sm text-gray-500 truncate max-w-xs">{bi.description}</div>
-                            )}
-                            {bi.observations && (
-                              <div className="text-xs text-gray-400 truncate max-w-xs">{bi.observations}</div>
-                            )}
+                            {bi.description && <div className="text-sm text-gray-500">{bi.description}</div>}
+                            {bi.observations && <div className="text-xs text-gray-400">{bi.observations}</div>}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <div className="flex items-center">
                           <Users className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm text-gray-900">{bi.owner || "Sem responsável"}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <span className="text-sm text-gray-900">{bi.area.join(", ")}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bi.status)}`}
                         >
@@ -925,18 +920,18 @@ const BiManagementSystem = (): ReactElement => {
                           <span className="ml-1">{bi.status}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500">
                         {bi.lastUpdate ? new Date(bi.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR") : "-"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bi.usage}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 text-sm text-gray-900">{bi.usage}</td>
+                      <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
                         >
                           {bi.criticality}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-4 text-sm font-medium">
                         <div className="flex space-x-2">
                           <Button
                             onClick={() => {
@@ -982,25 +977,21 @@ const BiManagementSystem = (): ReactElement => {
                               <FileText className="h-4 w-4 text-gray-300 mr-2" />
                               <div>
                                 <div className="text-sm text-gray-700">{page.name}</div>
-                                {page.description && (
-                                  <div className="text-xs text-gray-500 truncate max-w-xs">{page.description}</div>
-                                )}
-                                {page.observations && (
-                                  <div className="text-xs text-gray-400 truncate max-w-xs">{page.observations}</div>
-                                )}
+                                {page.description && <div className="text-xs text-gray-500">{page.description}</div>}
+                                {page.observations && <div className="text-xs text-gray-400">{page.observations}</div>}
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-6 py-3">
                             <div className="flex items-center">
                               <Users className="h-3 w-3 text-gray-400 mr-2" />
                               <span className="text-sm text-gray-700">{page.owner || "Sem responsável"}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-6 py-3">
                             <span className="text-sm text-gray-500">-</span>
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-6 py-3">
                             {page.status && (
                               <span
                                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(page.status)}`}
@@ -1010,13 +1001,13 @@ const BiManagementSystem = (): ReactElement => {
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-3 text-sm text-gray-500">
                             {page.lastUpdate
                               ? new Date(page.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR")
                               : "-"}
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">{page.usage || "-"}</td>
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-6 py-3 text-sm text-gray-700">{page.usage || "-"}</td>
+                          <td className="px-6 py-3">
                             {page.criticality && (
                               <span
                                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
@@ -1025,7 +1016,7 @@ const BiManagementSystem = (): ReactElement => {
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
+                          <td className="px-6 py-3 text-sm font-medium">
                             <div className="flex space-x-2">
                               <Button
                                 onClick={() => setEditingPage({ biId: bi.id, page })}

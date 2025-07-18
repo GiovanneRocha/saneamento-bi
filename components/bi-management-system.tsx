@@ -1109,7 +1109,7 @@ const BiManagementSystem = (): ReactElement => {
       {/* Barra Flutuante de Navegação */}
       {showFloatingBar && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-4 border border-gray-200">
+          <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-4 border border-gray-200 flex-row text-left">
             <span className="text-sm text-gray-600 whitespace-nowrap">
               {filteredBis.length} de {bis.length} BIs
             </span>
@@ -1176,7 +1176,7 @@ const BiManagementSystem = (): ReactElement => {
 
       {/* Footer */}
       <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
-        <p>
+        <p className="text-left">
           Desenvolvido por{" "}
           <a
             href="https://github.com/GiovanneRocha"

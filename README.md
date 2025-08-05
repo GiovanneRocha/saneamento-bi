@@ -1,8 +1,8 @@
 # 🧠 Sistema de Gestão e Saneamento de BIs
 
-[![Site Online](https://img.shields.io/badge/Acessar%20Sistema-bicontrol.vercel.app-00C853?logo=62FFa web desenvolvida para facilitar o gerenciamento, monitoramento e auditoria de relatórios de Business Intelligence (BI) em organizações. Ele oferece uma visão centralizada do ciclo de vida dos BIs, promovendo governança de dados, qualidade e rastreabilidade.
+![Site Online](https://img.shields.io/badge/Acessar%20Sistema-bicontrol.vercel.app-00C853?logo=62FFa) web desenvolvida para facilitar o gerenciamento, monitoramento e auditoria de relatórios de Business Intelligence (BI) em organizações. Ele oferece uma visão centralizada do ciclo de vida dos BIs, promovendo governança de dados, qualidade e rastreabilidade.
 
-🔗 **Acesse o sistema**: [https://bicontrol.vercel.app
+🔗 **Acesse o sistema**: [https://bicontrol.vercel.app]
 ---
 
 ## 🚀 Funcionalidades
@@ -22,19 +22,6 @@
 - **Hospedagem**: Vercel  
 - **Controle de versão**: Git + GitHub
 
----
-
-## 📚 Documentação
-
-A documentação completa de uso está disponível no repositório, com detalhes sobre:
-
-- Estrutura de dados dos BIs  
-- Métricas e indicadores  
-- Casos de uso práticos  
-- Solução de problemas comuns  
-- Boas práticas de governança
-
-📄 [Acessar Documentação
 ---
 
 ## 📞 Suporte

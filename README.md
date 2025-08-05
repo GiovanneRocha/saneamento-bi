@@ -1,6 +1,6 @@
 # 🧠 Sistema de Gestão e Saneamento de BIs
 
-[![Deploy](https://img.shields.io/badgeio/badge/GitHub-GiovanneRocha/s de BIs** é uma plataforma web desenvolvida para facilitar o gerenciamento, monitoramento e auditoria de relatórios de Business Intelligence (BI) em organizações. Ele oferece uma visão centralizada do ciclo de vida dos BIs, promovendo governança de dados, qualidade e rastreabilidade.
+(https://bicontrol.vercel.app/) é uma plataforma web desenvolvida para facilitar o gerenciamento, monitoramento e auditoria de relatórios de Business Intelligence (BI) em organizações. Ele oferece uma visão centralizada do ciclo de vida dos BIs, promovendo governança de dados, qualidade e rastreabilidade.
 
 🔗 **Acesse o sistema**: [https://bicontrol.vercel.app](https://bicuncionalidades
 

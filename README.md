@@ -1,162 +1,59 @@
-📘 Documentação de Uso
-Sistema de Gestão e Saneamento de BIs
-📑 Índice
-🎯 Visão Geral
-🚀 Funcionalidades Principais
-💻 Interface do Sistema
-📊 Métricas e Indicadores
-🗂️ Gerenciamento de BIs
-🔍 Filtros e Busca
-🏷️ Status e Classificações
-🔄 Fluxo de Trabalho
-💡 Casos de Uso
-🔧 Solução de Problemas
-📞 Suporte e Contato
-🔄 Atualizações
-🎯 Visão Geral
-O Sistema de Gestão e Saneamento de BIs é uma plataforma web voltada para o gerenciamento centralizado de relatórios e dashboards de Business Intelligence (BI). Seu principal objetivo é garantir governança, qualidade e rastreabilidade dos ativos de BI ao longo de seu ciclo de vida.
+# 🧠 Sistema de Gestão e Saneamento de BIs
 
-Objetivo Principal:
+[![Deploy](https://img.shields.io/badgeio/badge/GitHub-GiovanneRocha/s de BIs** é uma plataforma web desenvolvida para facilitar o gerenciamento, monitoramento e auditoria de relatórios de Business Intelligence (BI) em organizações. Ele oferece uma visão centralizada do ciclo de vida dos BIs, promovendo governança de dados, qualidade e rastreabilidade.
 
-Garantir que todos os BIs estejam atualizados
-Definir responsáveis claros
-Facilitar auditorias e decisões baseadas em dados confiáveis
-🚀 Funcionalidades Principais
-Dashboard de Métricas
+🔗 **Acesse o sistema**: [https://bicontrol.vercel.app](https://bicuncionalidades
 
-Visão geral do estado dos BIs
-Indicadores em tempo real
-Identificação de gargalos e oportunidades
-Inventário de BIs
+- **Dashboard de Métricas**: Indicadores em tempo real sobre o estado dos BIs.
+- **Inventário de BIs**: Listagem completa com histórico e detalhes técnicos.
+- **Gestão de Responsáveis**: Atribuição e rastreamento por área e usuário.
+- **Monitoramento de Status**: Alertas automáticos e controle de criticidade.
+- **Filtros e Busca Avançada**: Localização rápida por status, área, responsável e criticidade.
+- **Fluxo de Trabalho**: Cadastro, manutenção e descontinuação de BIs com validação.
 
-Catálogo completo dos relatórios
-Histórico de modificações
-Detalhamento técnico e funcional
-Gestão de Responsabilidades
+---
 
-Atribuição e rastreamento de responsáveis
-Organização por áreas e departamentos
-Controle de accountability
-Monitoramento de Status
+## 🖥️ Tecnologias Utilizadas
 
-Ciclo de vida dos BIs
-Alertas automáticos
-Controle de criticidade
-💻 Interface do Sistema
-Layout Principal
+- **Frontend**: React + Vite
+- **Backend**: Firebase / Firestore
+- **Hospedagem**: Vercel
+- **Controle de versão**: Git + GitHub
 
-Painel Superior: Cards com métricas e indicadores
-Tabela Inferior: Listagem detalhada dos BIs
-Elementos Visuais
+---
 
-Cores indicativas (verde, amarelo, vermelho)
-Botões de ação rápida
-Filtros dinâmicos e busca avançada
-📊 Métricas e Indicadores
-Métricas Quantitativas
+## 📚 Documentação
 
-Total de BIs
-Atualizados vs. Desatualizados
-Sem responsável
-Métricas Qualitativas
+A documentação completa de uso está disponível [aqui](https://github.com/GiovanneRocha/sBIs
+- Métricas e indicadores
+- Casos de uso práticos
+- Solução de problemas comuns
+- Boas práticas de governança
 
-Criticidade
-Frequência de uso
-Cobertura de responsabilidade
-Interpretação Visual
+---
 
-🟢 Verde: OK
-🟡 Amarelo: Atenção
-🔴 Vermelho: Crítico
-🗂️ Gerenciamento de BIs
-Campos por BI:
+## 🛠️ Como Contribuir
 
-Campo	Descrição	Tipo
-Nome do BI	Identificação única	Texto
-Responsável	Usuário responsável	Usuário
-Área	Departamento associado	Categoria
-Status	Estado atual	Enum
-Última Atualização	Data da última modificação	Data
-Uso	Frequência de utilização	Métrica
-Criticidade	Nível de importância	Escala
-Ações	Operações disponíveis	Botões
-Operações Disponíveis
+1. Faça um fork do repositório
+2. Crie uma branch com sua feature ou correção (`git checkout -b minha-feature`)
+3. Commit suas alterações (`git commit -m 'Minha contribuição'`)
+4. Faça push para a branch (`git push origin minha-feature`)
+5. Abra um Pull Request
 
-Visualizar
-Editar
-Atualizar
-Excluir
-Atribuir responsável
-🔍 Filtros e Busca
-Filtros Disponíveis
+---
 
-Por Status (Atualizado, Desatualizado, etc.)
-Por Responsável (Usuário, Equipe)
-Por Área (Vendas, RH, etc.)
-Por Criticidade (Crítico, Alto, Médio, Baixo)
-Busca Avançada
+## 📞 Suporte
 
-Por nome ou palavras-chave
-Filtros combinados
-Ordenação personalizada
-🏷️ Status e Classificações
-Status dos BIs
+Para dúvidas, sugestões ou problemas técnicos, entre em contato via [Issues](https://github.comente no repositório.
 
-🟢 Atualizado
-🟡 Desatualizado
-🔵 Em Manutenção
-🔴 Descontinuado
-Criticidade
+---
 
-Crítico: Impacto estratégico
-Alto: Operações diárias
-Médio: Uso regular
-Baixo: Consultas esporádicas
-🔄 Fluxo de Trabalho
-Cadastro de BI
+## 📅 Atualizações
 
-Definir nome, área e responsável
-Configurar cronograma e alertas
-Conceder acessos
-Manutenção de BI
+Este projeto está em constante evolução. Novas funcionalidades e melhorias são adicionadas regularmente.
 
-Identificar problemas
-Corrigir e atualizar
-Validar com usuários
-💡 Casos de Uso
-Auditoria de BIs
+**Última atualização**: Julho 2025  
+**Versão atual**: 1.1
 
-Verificar métricas
-Identificar BIs sem responsável
-Gerar relatório
-Atribuição de Responsável
+---
 
-Filtrar por área
-Atribuir novo responsável
-Confirmar alterações
-Descontinuação de BI
-
-Verificar uso
-Comunicar usuários
-Alterar status e remover
-🔧 Solução de Problemas
-Erros Comuns e Soluções
-
-Mensagem de Erro	Causa Provável	Solução
-Nenhum BI encontrado	Filtros restritivos	Ajustar filtros
-BI não aparece	Permissões ou sincronização	Verificar credenciais
-Status não atualiza	Cache ou conexão	Atualizar página (Ctrl+F5)
-Boas Práticas
-
-Atribuir responsáveis sempre
-Monitorar semanalmente
-Documentar alterações
-📞 Suporte e Contato
-Para dúvidas ou sugestões, acesse o repositório:
-🔗 GitHub - GiovanneRocha/saneamento-bi
-
-🔄 Atualizações
-Esta documentação é revisada periodicamente conforme novas funcionalidades são lançadas.
-
-Última atualização: Julho 2025
-Versão: 1.1

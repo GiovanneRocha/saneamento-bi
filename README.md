@@ -1,33 +1,30 @@
-# 🧠 Sistema de Gestão e Saneamento de BIs
+# React bi system
 
-![Site Online](https://img.shields.io/badge/Acessar%20Sistema-bicontrol.vercel.app-00C853?logo=62FFa) web desenvolvida para facilitar o gerenciamento, monitoramento e auditoria de relatórios de Business Intelligence (BI) em organizações. Ele oferece uma visão centralizada do ciclo de vida dos BIs, promovendo governança de dados, qualidade e rastreabilidade.
+*Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
-🔗 **Acesse o sistema**: [https://bicontrol.vercel.app]
----
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/giovanne-rocha-vieiras-projects/v0-react-bi-system)
+[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/ckSZ7mAURA4)
 
-## 🚀 Funcionalidades
+## Overview
 
-- **Dashboard de Métricas**: Indicadores em tempo real sobre o estado dos BIs.
-- **Inventário de BIs**: Listagem completa com histórico e detalhes técnicos.
-- **Gestão de Responsáveis**: Atribuição e rastreamento por área e usuário.
-- **Monitoramento de Status**: Alertas automáticos e controle de criticidade.
-- **Filtros e Busca Avançada**: Localização rápida por status, área, responsável e criticidade.
-- **Fluxo de Trabalho**: Cadastro, manutenção e descontinuação de BIs com validação.
+This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
+Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
 
----
+## Deployment
 
-## 🖥️ Tecnologias Utilizadas
-- **Frontend**: React + Vite  
-- **Backend**: Firebase / Firestore  
-- **Hospedagem**: Vercel  
-- **Controle de versão**: Git + GitHub
+Your project is live at:
 
----
+**[https://vercel.com/giovanne-rocha-vieiras-projects/v0-react-bi-system](https://vercel.com/giovanne-rocha-vieiras-projects/v0-react-bi-system)**
 
-## 📞 Suporte
+## Build your app
 
-Para dúvidas ou sugestões, utilize a aba de [Issues no GitHub] (https://github.com/GiovanneRocha)
-Este projeto está em constante evolução. Novas funcionalidades e melhorias são adicionadas regularmente.
+Continue building your app on:
 
-**Última atualização**: Julho 2025  
-**Versão atual**: 1.1
+**[https://v0.dev/chat/projects/ckSZ7mAURA4](https://v0.dev/chat/projects/ckSZ7mAURA4)**
+
+## How It Works
+
+1. Create and modify your project using [v0.dev](https://v0.dev)
+2. Deploy your chats from the v0 interface
+3. Changes are automatically pushed to this repository
+4. Vercel deploys the latest version from this repository

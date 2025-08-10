@@ -1,239 +1,699 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
-
-interface BiItem {
-  id: number
-  name: string
-  owner: string
-  area: string[]
-  status: string
-  lastUpdate: string
-  observations: string
-  usage: string
-  criticality: string
-  description: string
-}
-
-interface Area {
-  id: number
-  name: string
-  description?: string
-}
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { PlusCircle, XCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
+import type { BiItem, Area, Page } from "@/types/bi-types"
 
 interface BiFormProps {
-  bi?: BiItem
-  onSave: (bi: BiItem) => void
+  bi?: BiItem | null
+  onSave: (bi: BiItem | Omit<BiItem, "id">) => void
   onCancel: () => void
   areas: Area[]
 }
 
 const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
-  const [formData, setFormData] = useState<Omit<BiItem, "id">>({
-    name: bi?.name || "",
-    owner: bi?.owner || "",
-    area: bi?.area || [],
-    status: bi?.status || "Atualizado",
-    lastUpdate: bi?.lastUpdate || "",
-    observations: bi?.observations || "",
-    usage: bi?.usage || "Mensal",
-    criticality: bi?.criticality || "", // Alterado para string vazia
-    description: bi?.description || "",
-  })
+  const [formData, setFormData] = useState<BiItem | Omit<BiItem, "id">>(
+    bi || {
+      name: "",
+      owner: "",
+      area: [],
+      status: "",
+      lastUpdate: "",
+      observations: "",
+      usage: "",
+      criticality: "",
+      description: "",
+      link: "",
+      pages: [],
+    },
+  )
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [showPageForm, setShowPageForm] = useState(false)
+  const [editingPage, setEditingPage] = useState<Page | null>(null)
 
-  const handleSubmit = () => {
-    if (formData.name && formData.area.length > 0) {
-      if (bi) {
-        onSave({ ...formData, id: bi.id })
-      } else {
-        onSave(formData as BiItem)
-      }
+  useEffect(() => {
+    if (bi) {
+      setFormData(bi)
     } else {
-      alert("Por favor, preencha o nome do BI e selecione pelo menos uma área.")
+      setFormData({
+        name: "",
+        owner: "",
+        area: [],
+        status: "",
+        lastUpdate: "",
+        observations: "",
+        usage: "",
+        criticality: "",
+        description: "",
+        link: "",
+        pages: [],
+      })
+    }
+    setErrors({}) // Clear errors on form open/reset
+  }, [bi])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
     }
   }
 
-  const toggleAreaSelection = (areaName: string) => {
+  const handleSelectChange = (name: string, value: string | string[]) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const handleAreaMultiSelect = (selectedArea: string) => {
     setFormData((prev) => {
-      const currentAreas = prev.area || []
-      if (currentAreas.includes(areaName)) {
-        return { ...prev, area: currentAreas.filter((a) => a !== areaName) }
-      } else {
-        return { ...prev, area: [...currentAreas, areaName] }
+      const currentAreas = Array.isArray(prev.area) ? prev.area : []
+      const newAreas = currentAreas.includes(selectedArea)
+        ? currentAreas.filter((area) => area !== selectedArea)
+        : [...currentAreas, selectedArea]
+      if (errors.area) {
+        setErrors((prevErrors) => ({ ...prevErrors, area: "" }))
       }
+      return { ...prev, area: newAreas }
     })
   }
 
+  const handleAddPage = (newPage: Omit<Page, "id"> | Page) => {
+    let pageWithId: Page
+    if ("id" in newPage) {
+      pageWithId = newPage as Page
+    } else {
+      pageWithId = { ...newPage, id: Date.now() }
+    }
+    setFormData((prev) => ({
+      ...prev,
+      pages: prev.pages ? [...prev.pages, pageWithId] : [pageWithId],
+    }))
+    setShowPageForm(false)
+  }
+
+  const handleEditPage = (updatedPage: Page) => {
+    setFormData((prev) => ({
+      ...prev,
+      pages: prev.pages?.map((page) => (page.id === updatedPage.id ? updatedPage : page)),
+    }))
+    setEditingPage(null)
+    setShowPageForm(false)
+  }
+
+  const handleDeletePage = (pageId: number) => {
+    if (window.confirm("Tem certeza que deseja excluir esta página?")) {
+      setFormData((prev) => ({
+        ...prev,
+        pages: prev.pages?.filter((page) => page.id !== pageId),
+      }))
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {}
+    // Removed mandatory checks for name, owner, area, status, lastUpdate
+    // if (!formData.name.trim()) newErrors.name = "Nome é obrigatório."
+    // if (!formData.owner.trim()) newErrors.owner = "Responsável é obrigatório."
+    // if (formData.area.length === 0) newErrors.area = "Área é obrigatória."
+    // if (!formData.status.trim()) newErrors.status = "Status é obrigatório."
+
+    // Validate lastUpdate format (still important for date parsing)
+    const lastUpdateValue = formData.lastUpdate.trim()
+    if (lastUpdateValue && !/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.test(lastUpdateValue)) {
+      newErrors.lastUpdate = "Formato de data inválido. Use YYYY-MM-DD, YYYY-MM ou YYYY."
+    }
+
+    if (formData.link && !/^https?:\/\/\S+$/.test(formData.link)) {
+      newErrors.link = "Link inválido. Deve ser uma URL válida (ex: https://exemplo.com)."
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (validateForm()) {
+      let normalizedLastUpdate = formData.lastUpdate.trim()
+      const parts = normalizedLastUpdate.split("-")
+      if (parts.length === 1) {
+        // Only year
+        normalizedLastUpdate = `${parts[0]}-01-01`
+      } else if (parts.length === 2) {
+        // Year and month
+        normalizedLastUpdate = `${parts[0]}-${parts[1]}-01`
+      }
+      // If parts.length === 3, it's already YYYY-MM-DD, no change needed.
+
+      onSave({ ...formData, lastUpdate: normalizedLastUpdate })
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">{bi ? "Editar BI" : "Adicionar Novo BI"}</h3>
-
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Dialog open onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto rounded-lg shadow-lg">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-gray-800">
+            {bi ? "Editar BI" : "Adicionar Novo BI"}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="grid gap-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            {/* Nome do BI */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome do BI *</label>
-              <input
-                type="text"
+              <Label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Nome do BI
+              </Label>
+              <Input
+                id="name"
+                name="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
+                onChange={handleChange}
+                className={cn("w-full shadow-sm", errors.name && "border-red-500")}
               />
+              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
             </div>
 
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descrição do Arquivo</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Descrição detalhada do arquivo Power BI..."
-              />
-            </div>
-
+            {/* Responsável */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Responsável/Dono</label>
-              <input
-                type="text"
+              <Label htmlFor="owner" className="block text-sm font-medium text-gray-700 mb-1">
+                Responsável
+              </Label>
+              <Input
+                id="owner"
+                name="owner"
                 value={formData.owner}
-                onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={handleChange}
+                className={cn("w-full shadow-sm", errors.owner && "border-red-500")}
               />
+              {errors.owner && <p className="text-red-500 text-xs mt-1">{errors.owner}</p>}
             </div>
 
+            {/* Área */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Área/Sistema *</label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-transparent">
-                    <span className="truncate max-w-[calc(100%-1.5rem)]">
-                      {" "}
-                      {/* Added truncate and max-width */}
-                      {formData.area.length > 0 ? formData.area.join(", ") : "Selecione a(s) área(s)"}
-                    </span>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                  <DropdownMenuLabel>Selecione as Áreas</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+              <Label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1">
+                Área
+              </Label>
+              <Select onValueChange={(value) => handleAreaMultiSelect(value)}>
+                <SelectTrigger className={cn("w-full shadow-sm", errors.area && "border-red-500")}>
+                  <SelectValue placeholder="Selecione as áreas" />
+                </SelectTrigger>
+                <SelectContent>
                   {areas.map((area) => (
-                    <DropdownMenuCheckboxItem
-                      key={area.id}
-                      checked={formData.area.includes(area.name)}
-                      onCheckedChange={() => toggleAreaSelection(area.name)}
-                    >
+                    <SelectItem key={area.id} value={area.name}>
                       {area.name}
-                    </DropdownMenuCheckboxItem>
+                    </SelectItem>
                   ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </SelectContent>
+              </Select>
+              {errors.area && <p className="text-red-500 text-xs mt-1">{errors.area}</p>}
+              {formData.area.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.area.map((areaName, index) => (
+                    <span
+                      key={index}
+                      className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+                    >
+                      {areaName}
+                      <button
+                        type="button"
+                        onClick={() => handleAreaMultiSelect(areaName)}
+                        className="ml-1 text-blue-600 hover:text-blue-900"
+                      >
+                        <XCircle className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-              <select
+              <Label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </Label>
+              <Select
+                name="status"
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
+                onValueChange={(value) => handleSelectChange("status", value)}
               >
-                <option value="Atualizado">Atualizado</option>
-                <option value="Desatualizado">Desatualizado</option>
-                <option value="Em revisão">Em revisão</option>
-                <option value="Descontinuado">Descontinuado</option>
-                <option value="Sem responsável">Sem responsável</option>
-                <option value="Sem permissão">Sem permissão</option>
-                <option value="Não encontrado">Não encontrado</option> {/* New status */}
-              </select>
+                <SelectTrigger className={cn("w-full shadow-sm", errors.status && "border-red-500")}>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Selecione o status</SelectItem>
+                  <SelectItem value="Atualizado">Atualizado</SelectItem>
+                  <SelectItem value="Desatualizado">Desatualizado</SelectItem>
+                  <SelectItem value="Em revisão">Em revisão</SelectItem>
+                  <SelectItem value="Descontinuado">Descontinuado</SelectItem>
+                  <SelectItem value="Sem responsável">Sem responsável</SelectItem>
+                  <SelectItem value="Sem permissão">Sem permissão</SelectItem>
+                  <SelectItem value="Não encontrado">Não encontrado</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
             </div>
 
+            {/* Última Atualização */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Data da Última Atualização</label>
-              <input
-                type="date"
+              <Label htmlFor="lastUpdate" className="block text-sm font-medium text-gray-700 mb-1">
+                Última Atualização
+              </Label>
+              <Input
+                id="lastUpdate"
+                name="lastUpdate"
+                type="text"
                 value={formData.lastUpdate}
-                onChange={(e) => setFormData({ ...formData, lastUpdate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={handleChange}
+                className={cn("w-full shadow-sm", errors.lastUpdate && "border-red-500")}
+                placeholder="YYYY-MM-DD, YYYY-MM ou YYYY"
+              />
+              {errors.lastUpdate && <p className="text-red-500 text-xs mt-1">{errors.lastUpdate}</p>}
+            </div>
+
+            {/* Uso */}
+            <div>
+              <Label htmlFor="usage" className="block text-sm font-medium text-gray-700 mb-1">
+                Uso
+              </Label>
+              <Select name="usage" value={formData.usage} onValueChange={(value) => handleSelectChange("usage", value)}>
+                <SelectTrigger className="w-full shadow-sm">
+                  <SelectValue placeholder="Selecione a frequência de uso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Selecione a frequência de uso</SelectItem>
+                  <SelectItem value="Diário">Diário</SelectItem>
+                  <SelectItem value="Semanal">Semanal</SelectItem>
+                  <SelectItem value="Mensal">Mensal</SelectItem>
+                  <SelectItem value="Trimestral">Trimestral</SelectItem>
+                  <SelectItem value="Anual">Anual</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Criticidade */}
+            <div>
+              <Label htmlFor="criticality" className="block text-sm font-medium text-gray-700 mb-1">
+                Criticidade
+              </Label>
+              <Select
+                name="criticality"
+                value={formData.criticality}
+                onValueChange={(value) => handleSelectChange("criticality", value)}
+              >
+                <SelectTrigger className="w-full shadow-sm">
+                  <SelectValue placeholder="Selecione a criticidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Alta">Alta</SelectItem>
+                  <SelectItem value="Média">Média</SelectItem>
+                  <SelectItem value="Baixa">Baixa</SelectItem>
+                  <SelectItem value="default">Não Aplicável</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Link */}
+            <div>
+              <Label htmlFor="link" className="block text-sm font-medium text-gray-700 mb-1">
+                Link
+              </Label>
+              <Input
+                id="link"
+                name="link"
+                value={formData.link}
+                onChange={handleChange}
+                className={cn("w-full shadow-sm", errors.link && "border-red-500")}
+                placeholder="https://exemplo.com"
+              />
+              {errors.link && <p className="text-red-500 text-xs mt-1">{errors.link}</p>}
+            </div>
+
+            {/* Descrição */}
+            <div className="md:col-span-2">
+              <Label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                Descrição
+              </Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                className="w-full shadow-sm"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Frequência de Uso</label>
-              <select
-                value={formData.usage}
-                onChange={(e) => setFormData({ ...formData, usage: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="Diário">Diário</option>
-                <option value="Semanal">Semanal</option>
-                <option value="Mensal">Mensal</option>
-                <option value="Trimestral">Trimestral</option>
-                <option value="Anual">Anual</option>
-                <option value="Sob demanda">Sob demanda</option>
-                <option value="Não utilizado">Não utilizado</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Criticidade</label>
-              <select
-                value={formData.criticality}
-                onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Não Aplicável</option> {/* Nova opção */}
-                <option value="Alta">Alta</option>
-                <option value="Média">Média</option>
-                <option value="Baixa">Baixa</option>
-              </select>
+            {/* Observações */}
+            <div className="md:col-span-2">
+              <Label htmlFor="observations" className="block text-sm font-medium text-gray-700 mb-1">
+                Observações
+              </Label>
+              <Textarea
+                id="observations"
+                name="observations"
+                value={formData.observations}
+                onChange={handleChange}
+                className="w-full shadow-sm"
+              />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-            <textarea
-              value={formData.observations}
-              onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Observações, problemas identificados, melhorias necessárias..."
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
+          <div className="border-t pt-6 mt-6 md:col-span-2">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Páginas do BI</h3>
+            {formData.pages && formData.pages.length > 0 ? (
+              <div className="space-y-3">
+                {formData.pages.map((page) => (
+                  <div
+                    key={page.id}
+                    className="flex items-center justify-between bg-gray-50 p-3 rounded-md border border-gray-200"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{page.name}</p>
+                      <p className="text-sm text-gray-600">{page.description}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingPage(page)
+                          setShowPageForm(true)
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button type="button" variant="destructive" size="sm" onClick={() => handleDeletePage(page.id)}>
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Nenhuma página adicionada.</p>
+            )}
+            <Button
               type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+              variant="outline"
+              className="mt-4 bg-transparent border-dashed border-gray-300 text-gray-600 hover:bg-gray-100"
+              onClick={() => setShowPageForm(true)}
             >
+              <PlusCircle className="h-4 w-4 mr-2" /> Adicionar Página
+            </Button>
+          </div>
+
+          <DialogFooter className="mt-6 md:col-span-2 flex justify-end space-x-3">
+            <Button type="button" variant="outline" onClick={onCancel}>
               Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              {bi ? "Salvar Alterações" : "Adicionar BI"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+            <Button type="submit">Salvar BI</Button>
+          </DialogFooter>
+        </form>
+
+        {showPageForm && (
+          <PageForm
+            page={editingPage}
+            onSave={editingPage ? handleEditPage : handleAddPage}
+            onCancel={() => {
+              setShowPageForm(false)
+              setEditingPage(null)
+            }}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 
 export default BiForm
+
+interface PageFormProps {
+  page?: Page | null
+  onSave: (page: Page | Omit<Page, "id">) => void
+  onCancel: () => void
+}
+
+const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
+  const [formData, setFormData] = useState<Page | Omit<Page, "id">>(
+    page || {
+      name: "",
+      owner: "",
+      description: "",
+      status: "",
+      lastUpdate: "",
+      usage: "",
+      criticality: "",
+      observations: "",
+    },
+  )
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  useEffect(() => {
+    if (page) {
+      setFormData(page)
+    } else {
+      setFormData({
+        name: "",
+        owner: "",
+        // area: [], // Pages do not have an 'area' field, removed this line
+        status: "",
+        lastUpdate: "",
+        usage: "",
+        criticality: "",
+        description: "",
+        observations: "",
+      })
+    }
+    setErrors({}) // Clear errors on form open/reset
+  }, [page])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {}
+    // Removed mandatory checks for name, owner, status, lastUpdate
+    // if (!formData.name.trim()) newErrors.name = "Nome da página é obrigatório."
+    // if (!formData.owner.trim()) newErrors.owner = "Responsável da página é obrigatório."
+    // if (!formData.status.trim()) newErrors.status = "Status da página é obrigatório."
+
+    // Validate lastUpdate format (still important for date parsing)
+    const lastUpdateValue = formData.lastUpdate.trim()
+    if (lastUpdateValue && !/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.test(lastUpdateValue)) {
+      newErrors.lastUpdate = "Formato de data inválido. Use YYYY-MM-DD, YYYY-MM ou YYYY."
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (validateForm()) {
+      let normalizedLastUpdate = formData.lastUpdate.trim()
+      const parts = normalizedLastUpdate.split("-")
+      if (parts.length === 1) {
+        // Only year
+        normalizedLastUpdate = `${parts[0]}-01-01`
+      } else if (parts.length === 2) {
+        // Year and month
+        normalizedLastUpdate = `${parts[0]}-${parts[1]}-01`
+      }
+      // If parts.length === 3, it's already YYYY-MM-DD, no change needed.
+
+      onSave({ ...formData, lastUpdate: normalizedLastUpdate })
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto rounded-lg shadow-lg">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-gray-800">
+            {page ? "Editar Página" : "Adicionar Nova Página"}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="grid gap-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            {/* Nome da Página */}
+            <div>
+              <Label htmlFor="pageName" className="block text-sm font-medium text-gray-700 mb-1">
+                Nome da Página
+              </Label>
+              <Input
+                id="pageName"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className={cn("w-full shadow-sm", errors.name && "border-red-500")}
+              />
+              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+            </div>
+
+            {/* Responsável */}
+            <div>
+              <Label htmlFor="pageOwner" className="block text-sm font-medium text-gray-700 mb-1">
+                Responsável
+              </Label>
+              <Input
+                id="pageOwner"
+                name="owner"
+                value={formData.owner}
+                onChange={handleChange}
+                className={cn("w-full shadow-sm", errors.owner && "border-red-500")}
+              />
+              {errors.owner && <p className="text-red-500 text-xs mt-1">{errors.owner}</p>}
+            </div>
+
+            {/* Status */}
+            <div>
+              <Label htmlFor="pageStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </Label>
+              <Select
+                name="status"
+                value={formData.status}
+                onValueChange={(value) => handleSelectChange("status", value)}
+              >
+                <SelectTrigger className={cn("w-full shadow-sm", errors.status && "border-red-500")}>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Selecione o status</SelectItem>
+                  <SelectItem value="Atualizado">Atualizado</SelectItem>
+                  <SelectItem value="Desatualizado">Desatualizado</SelectItem>
+                  <SelectItem value="Em revisão">Em revisão</SelectItem>
+                  <SelectItem value="Descontinuado">Descontinuado</SelectItem>
+                  <SelectItem value="Sem responsável">Sem responsável</SelectItem>
+                  <SelectItem value="Sem permissão">Sem permissão</SelectItem>
+                  <SelectItem value="Não encontrado">Não encontrado</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+            </div>
+
+            {/* Última Atualização */}
+            <div>
+              <Label htmlFor="pageLastUpdate" className="block text-sm font-medium text-gray-700 mb-1">
+                Última Atualização
+              </Label>
+              <Input
+                id="pageLastUpdate"
+                name="lastUpdate"
+                type="text"
+                value={formData.lastUpdate}
+                onChange={handleChange}
+                className={cn("w-full shadow-sm", errors.lastUpdate && "border-red-500")}
+                placeholder="YYYY-MM-DD, YYYY-MM ou YYYY"
+              />
+              {errors.lastUpdate && <p className="text-red-500 text-xs mt-1">{errors.lastUpdate}</p>}
+            </div>
+
+            {/* Uso */}
+            <div>
+              <Label htmlFor="pageUsage" className="block text-sm font-medium text-gray-700 mb-1">
+                Uso
+              </Label>
+              <Select name="usage" value={formData.usage} onValueChange={(value) => handleSelectChange("usage", value)}>
+                <SelectTrigger className="w-full shadow-sm">
+                  <SelectValue placeholder="Selecione a frequência de uso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Selecione a frequência de uso</SelectItem>
+                  <SelectItem value="Diário">Diário</SelectItem>
+                  <SelectItem value="Semanal">Semanal</SelectItem>
+                  <SelectItem value="Mensal">Mensal</SelectItem>
+                  <SelectItem value="Trimestral">Trimestral</SelectItem>
+                  <SelectItem value="Anual">Anual</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Criticidade */}
+            <div>
+              <Label htmlFor="pageCriticality" className="block text-sm font-medium text-gray-700 mb-1">
+                Criticidade
+              </Label>
+              <Select
+                name="criticality"
+                value={formData.criticality}
+                onValueChange={(value) => handleSelectChange("criticality", value)}
+              >
+                <SelectTrigger className="w-full shadow-sm">
+                  <SelectValue placeholder="Selecione a criticidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Alta">Alta</SelectItem>
+                  <SelectItem value="Média">Média</SelectItem>
+                  <SelectItem value="Baixa">Baixa</SelectItem>
+                  <SelectItem value="default">Não Aplicável</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Descrição */}
+            <div className="md:col-span-2">
+              <Label htmlFor="pageDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                Descrição
+              </Label>
+              <Textarea
+                id="pageDescription"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                className="w-full shadow-sm"
+              />
+            </div>
+
+            {/* Observações */}
+            <div className="md:col-span-2">
+              <Label htmlFor="pageObservations" className="block text-sm font-medium text-gray-700 mb-1">
+                Observações
+              </Label>
+              <Textarea
+                id="pageObservations"
+                name="observations"
+                value={formData.observations}
+                onChange={handleChange}
+                className="w-full shadow-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-6 md:col-span-2 flex justify-end space-x-3">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar Página</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

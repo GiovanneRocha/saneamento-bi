@@ -2,27 +2,15 @@
 
 import type React from "react"
 import { useState } from "react"
-
-interface Page {
-  id: number
-  name: string
-  owner?: string
-  description?: string
-  status?: string
-  lastUpdate?: string
-  observations?: string
-  usage?: string
-  criticality?: string
-}
+import type { Page } from "@/types/bi-types" // Importar Page da nova localização
 
 interface PageFormProps {
-  biId: number
   page?: Page
-  onSave: (biId: number, page: Page | Omit<Page, "id">) => void
+  onSave: (page: Page | Omit<Page, "id">) => void // Alterado para retornar apenas a página
   onCancel: () => void
 }
 
-const PageForm: React.FC<PageFormProps> = ({ biId, page, onSave, onCancel }) => {
+const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Omit<Page, "id">>({
     name: page?.name || "",
     owner: page?.owner || "",
@@ -37,9 +25,9 @@ const PageForm: React.FC<PageFormProps> = ({ biId, page, onSave, onCancel }) => 
   const handleSubmit = () => {
     if (formData.name.trim()) {
       if (page) {
-        onSave(biId, { ...formData, id: page.id })
+        onSave({ ...formData, id: page.id })
       } else {
-        onSave(biId, formData)
+        onSave(formData)
       }
     } else {
       alert("Por favor, preencha o nome da página.")

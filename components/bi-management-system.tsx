@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { ChevronUp } from "lucide-react" // Import ChevronUp
+import { ChevronUp, Lock, LogOut, Archive } from "lucide-react"
 
 import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
@@ -28,56 +28,20 @@ import {
 import AreaManagement from "./area-management"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import BiForm from "./bi-form" // Importar BiForm do novo arquivo
-import { handleExport } from "@/utils/export-utils" // Importar handleExport do novo arquivo
-import PageForm from "./page-form"
-
-interface Page {
-  id: number
-  name: string
-  owner?: string
-  description?: string
-  status?: string
-  lastUpdate?: string
-  observations?: string
-  usage?: string
-  criticality?: string
-}
-
-interface BiItem {
-  id: number
-  name: string
-  owner: string
-  area: string[]
-  status: string
-  lastUpdate: string
-  observations: string
-  usage: string
-  criticality: string
-  description?: string
-  pages?: Page[]
-}
-
-interface Stats {
-  total: number
-  updated: number
-  outdated: number
-  noOwner: number
-  totalPages: number
-  updatedPages: number
-  outdatedPages: number
-  noOwnerPages: number
-}
-
-interface Area {
-  id: number
-  name: string
-  description?: string
-}
+import BiForm from "./bi-form"
+import { handleExport } from "@/utils/export-utils"
+import SavesDrawer from "./saves-drawer"
+import type { BiItem, Stats, Area, SaveData } from "@/types/bi-types"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip" // Importar Tooltip
 
 // Funções de persistência
 const STORAGE_KEY_BIS = "bi-management-bis"
 const STORAGE_KEY_AREAS = "bi-management-areas"
+const STORAGE_KEY_SAVES = "bi-management-saves"
+
+// Constantes para autenticação
+const AUTH_KEY = "bi-management-auth"
+const CORRECT_PASSWORD = "GControler4"
 
 const saveToLocalStorage = (bis: BiItem[], areas: Area[]) => {
   try {
@@ -103,7 +67,30 @@ const loadFromLocalStorage = (): { bis: BiItem[]; areas: Area[] } => {
   }
 }
 
+// Funções para gerenciar saves
+const savesToLocalStorage = (saves: SaveData[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY_SAVES, JSON.stringify(saves))
+  } catch (error) {
+    console.warn("Erro ao salvar saves no localStorage:", error)
+  }
+}
+
+const loadSavesFromLocalStorage = (): SaveData[] => {
+  try {
+    const savedSaves = localStorage.getItem(STORAGE_KEY_SAVES)
+    return savedSaves ? JSON.parse(savedSaves) : []
+  } catch (error) {
+    console.warn("Erro ao carregar saves do localStorage:", error)
+    return []
+  }
+}
+
 const BiManagementSystem = (): ReactElement => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState("")
+  const [authError, setAuthError] = useState("")
+
   const [bis, setBis] = useState<BiItem[]>([])
   const [filteredBis, setFilteredBis] = useState<BiItem[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -122,20 +109,32 @@ const BiManagementSystem = (): ReactElement => {
     totalPages: 0,
     updatedPages: 0,
     outdatedPages: 0,
+    noOwnerPages: 0,
+    updatedPercentage: 0, // Inicializar
+    outdatedPercentage: 0, // Inicializar
+    noOwnerPercentage: 0, // Inicializar
   })
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
   const [showFloatingBar, setShowFloatingBar] = useState(false)
 
   const [areas, setAreas] = useState<Area[]>([])
   const [showAreaManagement, setShowAreaManagement] = useState(false)
-  const [expandedBis, setExpandedBis] = useState<Set<number>>(new Set())
-  const [showAddPageForm, setShowAddPageForm] = useState(false)
-  const [editingPage, setEditingPage] = useState<{ biId: number; page: Page } | null>(null)
-  const [selectedBiForPage, setSelectedBiForPage] = useState<number | null>(null)
+  const [expandedBis, setExpandedBis] = useState<Set<number>>(new Set()) // Corrected initialization
 
   // Estados para ordenação
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | "none">("none")
+
+  // Estados para saves
+  const [saves, setSaves] = useState<SaveData[]>([])
+  const [showSavesDrawer, setShowSavesDrawer] = useState(false)
+
+  // States for hover effect on status cards
+  const [isUpdatedHovered, setIsUpdatedHovered] = useState(false)
+  const [isOutdatedHovered, setIsOutdatedHovered] = useState(false)
+  const [isNoOwnerHovered, setIsNoOwnerHovered] = useState(false)
+
+  const [currentSaveName, setCurrentSaveName] = useState<string | null>(null)
 
   // Dados de exemplo baseados na planilha
   const sampleData: BiItem[] = [
@@ -150,6 +149,7 @@ const BiManagementSystem = (): ReactElement => {
       usage: "Mensal",
       criticality: "Alta",
       description: "Dashboard principal para análise de estoques da VMSA",
+      link: "https://app.powerbi.com/view?r=eyJrIjoiYWJjZGVmZ2hpaiIsInQiOiJjIn0%3D", // Exemplo de link
       pages: [
         {
           id: 1,
@@ -183,6 +183,7 @@ const BiManagementSystem = (): ReactElement => {
       observations: "Formatação do layout",
       usage: "Diário",
       criticality: "Alta",
+      link: "https://app.powerbi.com/view?r=eyJrIjoiZGVmZ2hpamtsIiwidCI6ImNkIn0%3D", // Exemplo de link
     },
     {
       id: 3,
@@ -214,7 +215,6 @@ const BiManagementSystem = (): ReactElement => {
       status: "Sem responsável",
       lastUpdate: "2024-05-20",
       observations: "BI órfão, necessita definir responsável",
-      criticality: "", // Exemplo de BI sem criticidade
     },
     {
       id: 6,
@@ -239,6 +239,17 @@ const BiManagementSystem = (): ReactElement => {
         },
       ],
     },
+    {
+      id: 7,
+      name: "BI Descontinuado Exemplo",
+      owner: "João Ninguém",
+      area: ["TI"],
+      status: "Descontinuado",
+      lastUpdate: "2023-01-01",
+      observations: "BI não mais utilizado pela empresa.",
+      usage: "Inativo",
+      criticality: "Baixa",
+    },
   ]
 
   const initialAreas: Area[] = [
@@ -248,11 +259,10 @@ const BiManagementSystem = (): ReactElement => {
     { id: 4, name: "2423_Controladoria_Corporate", description: "Controladoria Corporate" },
     { id: 5, name: "2423_Controladoria_Custos", description: "Controladoria de Custos" },
     { id: 6, name: "2423_Controladoria_Estoque", description: "Controladoria de Estoque" },
-    { id: 7, name: "Vendas", description: "Área de Vendas" }, // Adicionado para exemplo
-    { id: 8, name: "Controladoria", description: "Área de Controladoria Geral" }, // Adicionado para exemplo
+    { id: 7, name: "Vendas", description: "Área de Vendas" },
+    { id: 8, name: "Controladoria", description: "Área de Controladoria Geral" },
   ]
 
-  // Refatorar applyFilters para aceitar os dados como argumento
   const applyFilters = (
     dataToFilter: BiItem[],
     search: string,
@@ -264,16 +274,33 @@ const BiManagementSystem = (): ReactElement => {
     sortCol: string | null,
     sortDir: "asc" | "desc" | "none",
   ) => {
-    // Sempre comece com uma cópia fresca dos dados originais para filtragem
-    let filtered = [...dataToFilter] // <--- CORREÇÃO AQUI: Cria uma cópia do array
+    let filtered = [...dataToFilter]
 
     if (search) {
-      filtered = filtered.filter(
-        (bi) =>
-          bi.name.toLowerCase().includes(search.toLowerCase()) ||
-          bi.owner.toLowerCase().includes(search.toLowerCase()) ||
-          bi.observations.toLowerCase().includes(search.toLowerCase()),
-      )
+      const lowerCaseSearch = search.toLowerCase()
+      filtered = filtered.filter((bi) => {
+        // Check BI's own fields
+        if (
+          bi.name.toLowerCase().includes(lowerCaseSearch) ||
+          bi.owner.toLowerCase().includes(lowerCaseSearch) ||
+          bi.observations.toLowerCase().includes(lowerCaseSearch) ||
+          (bi.description && bi.description.toLowerCase().includes(lowerCaseSearch))
+        ) {
+          return true
+        }
+
+        // Check BI's pages' fields
+        if (bi.pages) {
+          return bi.pages.some(
+            (page) =>
+              page.name.toLowerCase().includes(lowerCaseSearch) ||
+              page.owner.toLowerCase().includes(lowerCaseSearch) ||
+              (page.description && page.description.toLowerCase().includes(lowerCaseSearch)) ||
+              (page.observations && page.observations.toLowerCase().includes(lowerCaseSearch)),
+          )
+        }
+        return false
+      })
     }
 
     if (status !== "all") {
@@ -287,6 +314,8 @@ const BiManagementSystem = (): ReactElement => {
         filtered = filtered.filter((bi) => bi.status === "Sem permissão")
       } else if (status === "Não encontrado") {
         filtered = filtered.filter((bi) => bi.status === "Não encontrado")
+      } else if (status === "Descontinuado") {
+        filtered = filtered.filter((bi) => bi.status === "Descontinuado")
       }
     }
 
@@ -317,7 +346,6 @@ const BiManagementSystem = (): ReactElement => {
       })
     }
 
-    // Lógica de ordenação
     if (sortCol && sortDir !== "none") {
       filtered.sort((a, b) => {
         let valA: any
@@ -339,21 +367,25 @@ const BiManagementSystem = (): ReactElement => {
         return 0
       })
     }
-    // Se sortDir for "none", nenhuma ordenação explícita é aplicada,
-    // então a ordem será a ordem original de `bis` após a filtragem.
 
     setFilteredBis(filtered)
   }
 
   useEffect(() => {
+    const authStatus = localStorage.getItem(AUTH_KEY)
+    if (authStatus === "true") {
+      setIsAuthenticated(true)
+    }
+
     const savedData = loadFromLocalStorage()
+    const savedSaves = loadSavesFromLocalStorage()
 
     const initialBis = savedData.bis.length > 0 ? savedData.bis : sampleData
     const initialAreasData = savedData.areas.length > 0 ? savedData.areas : initialAreas
 
     setBis(initialBis)
     setAreas(initialAreasData)
-    // Chamar applyFilters com os dados iniciais carregados
+    setSaves(savedSaves)
     applyFilters(
       initialBis,
       searchTerm,
@@ -366,9 +398,8 @@ const BiManagementSystem = (): ReactElement => {
       sortDirection,
     )
     calculateStats(initialBis)
-  }, []) // Este useEffect só roda na montagem inicial
+  }, [])
 
-  // Efeito para re-aplicar filtros e ordenação quando os estados de filtro/ordenação mudam
   useEffect(() => {
     applyFilters(
       bis,
@@ -383,17 +414,13 @@ const BiManagementSystem = (): ReactElement => {
     )
   }, [searchTerm, filterStatus, filterArea, filterMonth, filterYear, filterCriticality, sortColumn, sortDirection, bis])
 
-  // Efeito para controlar a visibilidade do botão "Voltar ao Topo"
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY
       const windowHeight = window.innerHeight
       const documentHeight = document.documentElement.scrollHeight
 
-      // Mostrar barra flutuante quando não estiver no topo
       setShowFloatingBar(scrollY > 100)
-
-      // Mostrar botão "Voltar ao Topo" quando rolar mais de 200px
       setShowScrollToTopButton(scrollY > 200)
     }
 
@@ -402,52 +429,23 @@ const BiManagementSystem = (): ReactElement => {
   }, [])
 
   const toggleBiExpansion = (biId: number) => {
-    const newExpanded = new Set(expandedBis)
-    if (newExpanded.has(biId)) {
-      newExpanded.delete(biId)
-    } else {
-      newExpanded.add(biId)
-    }
-    setExpandedBis(newExpanded)
-  }
-
-  const handleAddPage = (biId: number, newPage: Omit<Page, "id">) => {
-    const pageWithId: Page = { ...newPage, id: Date.now() }
-    const updatedBis = bis.map((bi) => (bi.id === biId ? { ...bi, pages: [...(bi.pages || []), pageWithId] } : bi))
-    setBis(updatedBis)
-    saveToLocalStorage(updatedBis, areas)
-    calculateStats(updatedBis)
-    setShowAddPageForm(false)
-    setSelectedBiForPage(null)
-  }
-
-  const handleEditPage = (biId: number, updatedPage: Page) => {
-    const updatedBis = bis.map((bi) =>
-      bi.id === biId
-        ? {
-            ...bi,
-            pages: bi.pages?.map((page) => (page.id === updatedPage.id ? updatedPage : page)) || [],
-          }
-        : bi,
-    )
-    setBis(updatedBis)
-    saveToLocalStorage(updatedBis, areas)
-    calculateStats(updatedBis)
-    setEditingPage(null)
-  }
-
-  const handleDeletePage = (biId: number, pageId: number) => {
-    if (window.confirm("Tem certeza que deseja excluir esta página?")) {
-      const updatedBis = bis.map((bi) =>
-        bi.id === biId ? { ...bi, pages: bi.pages?.filter((page) => page.id !== pageId) || [] } : bi,
-      )
-      setBis(updatedBis)
-      saveToLocalStorage(updatedBis, areas)
-      calculateStats(updatedBis)
-    }
+    setExpandedBis((prev) => {
+      const newExpanded = new Set(prev)
+      if (newExpanded.has(biId)) {
+        newExpanded.delete(biId)
+      } else {
+        newExpanded.add(biId)
+      }
+      return newExpanded
+    })
   }
 
   const calculateStats = (data: BiItem[]) => {
+    const totalBis = data.length
+    const updatedBis = data.filter((bi) => bi.status === "Atualizado").length
+    const outdatedBis = data.filter((bi) => bi.status.includes("Desatualizado")).length
+    const noOwnerBis = data.filter((bi) => !bi.owner || bi.owner === "").length
+
     const totalPages = data.reduce((sum, bi) => sum + (bi.pages?.length || 0), 0)
     const updatedPages = data.reduce(
       (sum, bi) => sum + (bi.pages?.filter((page) => page.status === "Atualizado").length || 0),
@@ -463,14 +461,17 @@ const BiManagementSystem = (): ReactElement => {
     )
 
     const newStats: Stats = {
-      total: data.length,
-      updated: data.filter((bi) => bi.status === "Atualizado").length,
-      outdated: data.filter((bi) => bi.status.includes("Desatualizado")).length,
-      noOwner: data.filter((bi) => !bi.owner || bi.owner === "").length,
+      total: totalBis,
+      updated: updatedBis,
+      outdated: outdatedBis,
+      noOwner: noOwnerBis,
       totalPages,
       updatedPages,
       outdatedPages,
       noOwnerPages,
+      updatedPercentage: totalBis > 0 ? (updatedBis / totalBis) * 100 : 0,
+      outdatedPercentage: totalBis > 0 ? (outdatedBis / totalBis) * 100 : 0,
+      noOwnerPercentage: totalBis > 0 ? (noOwnerBis / totalBis) * 100 : 0,
     }
     setStats(newStats)
   }
@@ -501,14 +502,14 @@ const BiManagementSystem = (): ReactElement => {
 
   const getStatusColor = (status: string) => {
     if (status === "Atualizado") return "text-green-600 bg-green-50"
-    if (status.includes("Desatualizado")) return "text-red-600 bg-red-50"
-    if (status === "Sem permissão" || status === "Não encontrado") return "text-gray-600 bg-gray-100" // New status colors
+    if (status.includes("Desatualizado") || status === "Descontinuado") return "text-red-600 bg-red-50"
+    if (status === "Sem permissão" || status === "Não encontrado") return "text-gray-600 bg-gray-100"
     return "text-yellow-600 bg-yellow-50"
   }
 
   const getStatusIcon = (status: string) => {
     if (status === "Atualizado") return <CheckCircle className="h-4 w-4" />
-    if (status.includes("Desatualizado")) return <XCircle className="h-4 w-4" />
+    if (status.includes("Desatualizado") || status === "Descontinuado") return <XCircle className="h-4 w-4" />
     return <AlertCircle className="h-4 w-4" />
   }
 
@@ -516,11 +517,17 @@ const BiManagementSystem = (): ReactElement => {
     if (criticality === "Alta") return "bg-red-100 text-red-800"
     if (criticality === "Média") return "bg-yellow-100 text-yellow-800"
     if (criticality === "Baixa") return "bg-green-100 text-green-800"
-    return "bg-gray-100 text-gray-800" // Cor para "Não Aplicável" ou vazio
+    return "bg-gray-100 text-gray-800"
   }
 
-  const handleAddBi = (newBi: Omit<BiItem, "id">) => {
-    const biWithId: BiItem = { ...newBi, id: Date.now() }
+  const handleAddBi = (newBi: Omit<BiItem, "id"> | BiItem) => {
+    let biWithId: BiItem
+    if ("id" in newBi) {
+      biWithId = newBi as BiItem
+    } else {
+      biWithId = { ...newBi, id: Date.now() }
+    }
+
     const updatedBis = [...bis, biWithId]
     setBis(updatedBis)
     saveToLocalStorage(updatedBis, areas)
@@ -550,14 +557,14 @@ const BiManagementSystem = (): ReactElement => {
     const updatedAreas = [...areas, areaWithId]
     setAreas(updatedAreas)
     saveToLocalStorage(bis, updatedAreas)
-    setShowAreaManagement(false) // Fechar o formulário de área após adicionar
+    setShowAreaManagement(false)
   }
 
   const handleEditArea = (updatedArea: Area) => {
     const updatedAreas = areas.map((area) => (area.id === updatedArea.id ? updatedArea : area))
     setAreas(updatedAreas)
     saveToLocalStorage(bis, updatedAreas)
-    setShowAreaManagement(false) // Fechar o formulário de área após editar
+    setShowAreaManagement(false)
   }
 
   const handleDeleteArea = (id: number) => {
@@ -612,6 +619,7 @@ const BiManagementSystem = (): ReactElement => {
         setAreas(mergedAreas)
         calculateStats(mergedBis)
         saveToLocalStorage(mergedBis, mergedAreas)
+        setCurrentSaveName(null)
 
         alert(
           `Dados importados e mesclados com sucesso!\n${importedData.bis.length} BIs e ${importedData.areas.length} áreas do arquivo foram processados.`,
@@ -627,14 +635,17 @@ const BiManagementSystem = (): ReactElement => {
   }
 
   const handleClearData = () => {
-    if (window.confirm("Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.")) {
+    if (
+      window.confirm("Tem certeza que deseja limpar os dados da sessão atual? Esta ação não afetará os saves salvos.")
+    ) {
       setBis([])
       setAreas([])
-      setFilteredBis([]) // Limpar filteredBis também
+      setFilteredBis([])
       calculateStats([])
       localStorage.removeItem(STORAGE_KEY_BIS)
       localStorage.removeItem(STORAGE_KEY_AREAS)
-      alert("Dados limpos com sucesso!")
+      setCurrentSaveName(null)
+      alert("Dados da sessão atual limpos com sucesso! Os saves permanecem intactos.")
     }
   }
 
@@ -658,7 +669,7 @@ const BiManagementSystem = (): ReactElement => {
         setSortDirection("desc")
       } else if (sortDirection === "desc") {
         setSortDirection("none")
-        setSortColumn(null) // Reset column when returning to original order
+        setSortColumn(null)
       } else {
         setSortDirection("asc")
       }
@@ -679,17 +690,216 @@ const BiManagementSystem = (): ReactElement => {
     return <ArrowUpDown className="ml-1 h-3 w-3 text-gray-400" />
   }
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password === CORRECT_PASSWORD) {
+      setIsAuthenticated(true)
+      localStorage.setItem(AUTH_KEY, "true")
+      setAuthError("")
+      setPassword("")
+    } else {
+      setAuthError("Senha incorreta. Tente novamente.")
+      setPassword("")
+    }
+  }
+
+  const handleLogout = () => {
+    if (window.confirm("Tem certeza que deseja sair do sistema?")) {
+      setIsAuthenticated(false)
+      localStorage.removeItem(AUTH_KEY)
+      setPassword("")
+      setAuthError("")
+    }
+  }
+
+  const handleSaveCurrent = (name: string, description?: string) => {
+    const newSave: SaveData = {
+      id: Date.now().toString(),
+      name,
+      description,
+      createdAt: new Date().toISOString(),
+      bis: [...bis],
+      areas: [...areas],
+      stats: {
+        total: stats.total,
+        updated: stats.updated,
+        outdated: stats.outdated,
+        noOwner: stats.noOwner,
+      },
+    }
+
+    const updatedSaves = [...saves, newSave]
+    setSaves(updatedSaves)
+    savesToLocalStorage(updatedSaves)
+    setCurrentSaveName(name)
+    alert(`Save "${name}" criado com sucesso!`)
+  }
+
+  const handleLoadSave = (saveData: SaveData) => {
+    if (window.confirm(`Carregar o save "${saveData.name}"? Os dados atuais serão substituídos.`)) {
+      setBis(saveData.bis)
+      setAreas(saveData.areas)
+      calculateStats(saveData.bis)
+      saveToLocalStorage(saveData.bis, saveData.areas)
+      setCurrentSaveName(saveData.name)
+      setShowSavesDrawer(false)
+      alert(`Save "${saveData.name}" carregado com sucesso!`)
+    }
+  }
+
+  const handleDeleteSave = (saveId: string) => {
+    const saveToDelete = saves.find((s) => s.id === saveId)
+    if (!saveToDelete) return
+
+    if (window.confirm(`Tem certeza que deseja excluir o save "${saveToDelete.name}"?`)) {
+      const updatedSaves = saves.filter((s) => s.id !== saveId)
+      setSaves(updatedSaves)
+      savesToLocalStorage(updatedSaves)
+
+      if (currentSaveName === saveToDelete.name) {
+        setCurrentSaveName(null)
+      }
+
+      alert(`Save "${saveToDelete.name}" excluído com sucesso!`)
+    }
+  }
+
+  const handleImportSave = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const importedSave = JSON.parse(content)
+
+        if (
+          !importedSave.id ||
+          !importedSave.name ||
+          !Array.isArray(importedSave.bis) ||
+          !Array.isArray(importedSave.areas)
+        ) {
+          alert("Arquivo de save inválido. Verifique se o formato está correto.")
+          return
+        }
+
+        const newSave: SaveData = {
+          ...importedSave,
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+        }
+
+        const updatedSaves = [...saves, newSave]
+        setSaves(updatedSaves)
+        savesToLocalStorage(updatedSaves)
+        alert(`Save "${newSave.name}" importado com sucesso!`)
+      } catch (error) {
+        console.error("Erro ao importar save:", error)
+        alert("Erro ao importar save. Verifique se o arquivo está correto.")
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  const handleExportSave = (saveData: SaveData) => {
+    const json = JSON.stringify(saveData)
+    const blob = new Blob([json], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `save-${saveData.name.replace(/ /g, "_")}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // Helper function to format date
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "-"
+    try {
+      const date = new Date(dateString + "T00:00:00") // Add T00:00:00 to ensure correct date parsing for YYYY-MM or YYYY
+      const day = String(date.getDate()).padStart(2, "0")
+      const month = String(date.getMonth() + 1).padStart(2, "0")
+      const year = date.getFullYear()
+      return `${day}/${month}/${year}`
+    } catch (error) {
+      console.error("Error formatting date:", dateString, error)
+      return dateString // Return original if invalid
+    }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <Lock className="h-8 w-8 text-blue-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Acesso Restrito</h1>
+            <p className="text-gray-600">Sistema de Gestão e Saneamento de BIs</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Senha de Acesso
+              </label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setAuthError("")
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Digite a senha de acesso"
+                required
+                autoFocus
+              />
+              {authError && (
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  {authError}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
+            >
+              Acessar Sistema
+            </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+            <p className="text-xs text-gray-500">Sistema protegido por senha para garantir a segurança dos dados</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
+      <button
+        onClick={() => setShowSavesDrawer(true)}
+        className="fixed top-4 right-4 z-30 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors"
+        title="Central de Saves"
+      >
+        <Archive className="h-6 w-6" />
+      </button>
+
       <div className="max-w-full mx-auto flex-grow w-full px-4 md:px-6">
-        {" "}
-        {/* Ajustado para max-w-full e padding */}
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 relative">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6 relative">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
             <div className="flex items-center space-x-3">
               <Image src="/favicon.ico" alt="BI Management Icon" width={40} height={40} className="rounded-lg" />
-              <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">Gestão e Saneamento de BIs</h1>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">Gestão e Saneamento de BIs</h1>
+                {currentSaveName && <p className="text-sm text-blue-600 mt-1">Save ativo: {currentSaveName}</p>}
+              </div>
             </div>
             <div className="flex flex-wrap gap-3 justify-end md:ml-auto">
               <Button
@@ -707,7 +917,7 @@ const BiManagementSystem = (): ReactElement => {
               </label>
 
               <Button
-                onClick={() => handleExport(bis, areas)} // Chamar handleExport com os dados atuais
+                onClick={() => handleExport(bis, areas)}
                 className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -725,17 +935,24 @@ const BiManagementSystem = (): ReactElement => {
               <Button
                 onClick={handleClearData}
                 className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
-                title="Limpar todos os dados"
+                title="Limpar dados da sessão atual (não afeta os saves)"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Limpar Dados
+                Limpar Sessão
+              </Button>
+              <Button
+                onClick={handleLogout}
+                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs"
+                title="Sair do sistema"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
               </Button>
             </div>
           </div>
 
-          {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-            <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="bg-blue-50 p-3 rounded-lg shadow-sm">
               <div className="flex items-center">
                 <BarChart3 className="h-7 w-7 text-blue-600 mr-2" />
                 <div>
@@ -744,7 +961,7 @@ const BiManagementSystem = (): ReactElement => {
                 </div>
               </div>
             </div>
-            <div className="bg-purple-50 p-3 rounded-lg">
+            <div className="bg-purple-50 p-3 rounded-lg shadow-sm">
               <div className="flex items-center">
                 <FileText className="h-7 w-7 text-purple-600 mr-2" />
                 <div>
@@ -753,46 +970,131 @@ const BiManagementSystem = (): ReactElement => {
                 </div>
               </div>
             </div>
-            <div className="bg-green-50 p-3 rounded-lg">
-              <div className="flex items-center">
-                <CheckCircle className="h-7 w-7 text-green-600 mr-2" />
-                <div>
-                  <p className="text-xs font-medium text-green-600">Atualizados</p>
-                  <p className="text-xl font-bold text-green-900">{stats.updated}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-red-50 p-3 rounded-lg">
-              <div className="flex items-center">
-                <XCircle className="h-7 w-7 text-red-600 mr-2" />
-                <div>
-                  <p className="text-xs font-medium text-red-600">Desatualizados</p>
-                  <p className="text-xl font-bold text-red-900">{stats.outdated}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-yellow-50 p-3 rounded-lg">
-              <div className="flex items-center">
-                <Users className="h-7 w-7 text-yellow-600 mr-2" />
-                <div>
-                  <p className="text-xs font-medium text-yellow-600">Sem Responsável</p>
-                  <p className="text-xl font-bold text-yellow-900">{stats.noOwner}</p>
-                </div>
-              </div>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="bg-green-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
+                    onMouseEnter={() => setIsUpdatedHovered(true)}
+                    onMouseLeave={() => setIsUpdatedHovered(false)}
+                  >
+                    <div className="flex items-center">
+                      <CheckCircle className="h-7 w-7 text-green-600 mr-2" />
+                      <div>
+                        <p className="text-xs font-medium text-green-600">Atualizados</p>
+                        <div className="relative h-6">
+                          <p
+                            className={`absolute inset-0 text-xl font-bold text-green-900 transition-all duration-300 ease-in-out ${
+                              isUpdatedHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
+                            }`}
+                          >
+                            {stats.updated}
+                          </p>
+                          <p
+                            className={`absolute inset-0 text-xl font-bold text-green-900 transition-all duration-300 ease-in-out ${
+                              isUpdatedHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
+                            }`}
+                          >
+                            {stats.updatedPercentage.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{stats.updatedPercentage.toFixed(1)}% do total de BIs</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="bg-red-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
+                    onMouseEnter={() => setIsOutdatedHovered(true)}
+                    onMouseLeave={() => setIsOutdatedHovered(false)}
+                  >
+                    <div className="flex items-center">
+                      <XCircle className="h-7 w-7 text-red-600 mr-2" />
+                      <div>
+                        <p className="text-xs font-medium text-red-600">Desatualizados</p>
+                        <div className="relative h-6">
+                          <p
+                            className={`absolute inset-0 text-xl font-bold text-red-900 transition-all duration-300 ease-in-out ${
+                              isOutdatedHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
+                            }`}
+                          >
+                            {stats.outdated}
+                          </p>
+                          <p
+                            className={`absolute inset-0 text-xl font-bold text-red-900 transition-all duration-300 ease-in-out ${
+                              isOutdatedHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
+                            }`}
+                          >
+                            {stats.outdatedPercentage.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{stats.outdatedPercentage.toFixed(1)}% do total de BIs</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="bg-yellow-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
+                    onMouseEnter={() => setIsNoOwnerHovered(true)}
+                    onMouseLeave={() => setIsNoOwnerHovered(false)}
+                  >
+                    <div className="flex items-center">
+                      <Users className="h-7 w-7 text-yellow-600 mr-2" />
+                      <div>
+                        <p className="text-xs font-medium text-yellow-600">Sem Responsável</p>
+                        <div className="relative h-6">
+                          <p
+                            className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
+                              isNoOwnerHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
+                            }`}
+                          >
+                            {stats.noOwner}
+                          </p>
+                          <p
+                            className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
+                              isNoOwnerHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
+                            }`}
+                          >
+                            {stats.noOwnerPercentage.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{stats.noOwnerPercentage.toFixed(1)}% do total de BIs</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
-          {/* Filters */}
+          {/* Removed chart section */}
+
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-64">
               <div className="relative">
                 <Search className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por nome, responsável ou observações..."
+                  placeholder="Buscar por nome, responsável, descrições ou observações..."
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                 />
               </div>
             </div>
@@ -800,7 +1102,7 @@ const BiManagementSystem = (): ReactElement => {
             <select
               value={filterArea}
               onChange={(e) => handleAreaFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
             >
               <option value="all">Todas as Áreas</option>
               {areas.map((area) => (
@@ -813,20 +1115,21 @@ const BiManagementSystem = (): ReactElement => {
             <select
               value={filterStatus}
               onChange={(e) => handleStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
             >
               <option value="all">Todos os Status</option>
               <option value="updated">Atualizados</option>
               <option value="outdated">Desatualizados</option>
               <option value="no_owner">Sem Responsável</option>
-              <option value="Sem permissão">Sem permissão</option> {/* New status filter option */}
-              <option value="Não encontrado">Não encontrado</option> {/* New status filter option */}
+              <option value="Sem permissão">Sem permissão</option>
+              <option value="Não encontrado">Não encontrado</option>
+              <option value="Descontinuado">Descontinuado</option>
             </select>
 
             <select
               value={filterMonth}
               onChange={(e) => handleMonthFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
             >
               <option value="all">Todos os Meses</option>
               <option value="01">Janeiro</option>
@@ -846,7 +1149,7 @@ const BiManagementSystem = (): ReactElement => {
             <select
               value={filterYear}
               onChange={(e) => handleYearFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
             >
               <option value="all">Todos os Anos</option>
               {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i).map((year) => (
@@ -859,18 +1162,17 @@ const BiManagementSystem = (): ReactElement => {
             <select
               value={filterCriticality}
               onChange={(e) => handleCriticalityFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
             >
               <option value="all">Todas as Criticidades</option>
-              <option value="">Não Aplicável</option> {/* Nova opção de filtro */}
+              <option value="">Não Aplicável</option>
               <option value="Alta">Alta</option>
               <option value="Média">Média</option>
               <option value="Baixa">Baixa</option>
             </select>
           </div>
         </div>
-        {/* BIs List */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -891,7 +1193,7 @@ const BiManagementSystem = (): ReactElement => {
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort("area")}
                   >
-                    <div className="flex items-center">Área(s) {getSortIcon("area")}</div>
+                    <div className="flex items-center">Área {getSortIcon("area")}</div>
                   </th>
                   <th
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -925,7 +1227,6 @@ const BiManagementSystem = (): ReactElement => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredBis.map((bi) => (
                   <React.Fragment key={bi.id}>
-                    {/* Linha do BI principal */}
                     <tr className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
@@ -940,10 +1241,25 @@ const BiManagementSystem = (): ReactElement => {
                             )}
                           </button>
                           <FileText className="h-5 w-5 text-gray-400 mr-2" />
-                          <div>
+                          <div className="flex-1">
                             <div className="text-sm font-medium text-gray-900">{bi.name}</div>
                             {bi.description && <div className="text-sm text-gray-500">{bi.description}</div>}
-                            {bi.observations && <div className="text-xs text-gray-400">{bi.observations}</div>}
+
+                            {/* BI Link only appears when expanded */}
+                            {expandedBis.has(bi.id) && bi.link && (
+                              <div className="mt-2">
+                                <a
+                                  href={bi.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                >
+                                  🔗 Link do BI
+                                </a>
+                              </div>
+                            )}
+
+                            {bi.observations && <div className="text-xs text-gray-400 mt-1">{bi.observations}</div>}
                           </div>
                         </div>
                       </td>
@@ -964,31 +1280,17 @@ const BiManagementSystem = (): ReactElement => {
                           <span className="ml-1">{bi.status}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {bi.lastUpdate ? new Date(bi.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR") : "-"}
-                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{formatDate(bi.lastUpdate)}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{bi.usage}</td>
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
                         >
-                          {bi.criticality || "Não Aplicável"} {/* Exibe "Não Aplicável" se vazio */}
+                          {bi.criticality || "Não Aplicável"}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
                         <div className="flex space-x-2">
-                          <Button
-                            onClick={() => {
-                              setSelectedBiForPage(bi.id)
-                              setShowAddPageForm(true)
-                            }}
-                            className="text-green-600 hover:text-green-900"
-                            title="Adicionar Página"
-                            variant="ghost"
-                            size="icon"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
                           <Button
                             onClick={() => setEditingBi(bi)}
                             className="text-blue-600 hover:text-blue-900"
@@ -1011,7 +1313,6 @@ const BiManagementSystem = (): ReactElement => {
                       </td>
                     </tr>
 
-                    {/* Linhas das páginas (quando expandido) */}
                     {expandedBis.has(bi.id) &&
                       bi.pages?.map((page) => (
                         <tr key={`${bi.id}-${page.id}`} className="bg-gray-25 hover:bg-gray-50">
@@ -1045,41 +1346,20 @@ const BiManagementSystem = (): ReactElement => {
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-3 text-sm text-gray-500">
-                            {page.lastUpdate
-                              ? new Date(page.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR")
-                              : "-"}
-                          </td>
+                          <td className="px-6 py-3 text-sm text-gray-500">{formatDate(page.lastUpdate)}</td>
                           <td className="px-6 py-3 text-sm text-gray-700">{page.usage || "-"}</td>
                           <td className="px-6 py-3">
-                            {page.criticality !== undefined && ( // Verifica se a propriedade existe
+                            {page.criticality !== undefined && (
                               <span
                                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
                               >
-                                {page.criticality || "Não Aplicável"} {/* Exibe "Não Aplicável" se vazio */}
+                                {page.criticality || "Não Aplicável"}
                               </span>
                             )}
                           </td>
                           <td className="px-6 py-3 text-sm font-medium">
                             <div className="flex space-x-2">
-                              <Button
-                                onClick={() => setEditingPage({ biId: bi.id, page })}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Editar Página"
-                                variant="ghost"
-                                size="icon"
-                              >
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                onClick={() => handleDeletePage(bi.id, page.id)}
-                                className="text-red-600 hover:text-red-900"
-                                title="Excluir Página"
-                                variant="ghost"
-                                size="icon"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              {/* Botões de edição e exclusão de página agora são gerenciados pelo BiForm */}
                             </div>
                           </td>
                         </tr>
@@ -1097,7 +1377,6 @@ const BiManagementSystem = (): ReactElement => {
             </div>
           )}
 
-          {/* BI Counter - versão simplificada no final da tabela */}
           <div className="p-4 text-sm text-gray-600 border-t border-gray-200 text-center">
             <span>
               Mostrando {filteredBis.length} de {bis.length} BIs
@@ -1106,7 +1385,6 @@ const BiManagementSystem = (): ReactElement => {
         </div>
       </div>
 
-      {/* Barra Flutuante de Navegação */}
       {showFloatingBar && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
           <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-4 border border-gray-200 flex-row text-left">
@@ -1137,12 +1415,23 @@ const BiManagementSystem = (): ReactElement => {
         </div>
       )}
 
-      {/* Add/Edit Forms */}
+      <SavesDrawer
+        isOpen={showSavesDrawer}
+        onClose={() => setShowSavesDrawer(false)}
+        currentBis={bis}
+        currentAreas={areas}
+        onLoadSave={handleLoadSave}
+        saves={saves}
+        onSaveCurrent={handleSaveCurrent}
+        onDeleteSave={handleDeleteSave}
+        onImportSave={handleImportSave}
+        onExportSave={handleExportSave}
+      />
+
       {showAddForm && <BiForm onSave={handleAddBi} onCancel={() => setShowAddForm(false)} areas={areas} />}
 
       {editingBi && <BiForm bi={editingBi} onSave={handleEditBi} onCancel={() => setEditingBi(null)} areas={areas} />}
 
-      {/* Area Management */}
       {showAreaManagement && (
         <AreaManagement
           areas={areas}
@@ -1153,28 +1442,6 @@ const BiManagementSystem = (): ReactElement => {
         />
       )}
 
-      {/* Page Forms */}
-      {showAddPageForm && selectedBiForPage && (
-        <PageForm
-          biId={selectedBiForPage}
-          onSave={handleAddPage}
-          onCancel={() => {
-            setShowAddPageForm(false)
-            setSelectedBiForPage(null)
-          }}
-        />
-      )}
-
-      {editingPage && (
-        <PageForm
-          biId={editingPage.biId}
-          page={editingPage.page}
-          onSave={handleEditPage}
-          onCancel={() => setEditingPage(null)}
-        />
-      )}
-
-      {/* Footer */}
       <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
         <p className="text-left">
           Desenvolvido por{" "}

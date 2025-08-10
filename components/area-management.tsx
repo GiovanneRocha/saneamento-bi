@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { Edit2, Trash2, Plus, X } from "lucide-react"
+import { useState, useRef } from "react" // Importar useRef
+import { Edit2, Trash2, Plus, X, ArrowUp, ArrowDown } from "lucide-react" // Adicionar ArrowUp e ArrowDown
 
 interface Area {
   id: number
@@ -94,10 +94,29 @@ const AreaForm: React.FC<AreaFormProps> = ({ area, onSave, onCancel }) => {
 const AreaManagement: React.FC<AreaManagementProps> = ({ areas, onAddArea, onEditArea, onDeleteArea, onClose }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingArea, setEditingArea] = useState<Area | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null) // Ref para o container de rolagem
+
+  const scrollToTop = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
+    }
+  }
+
+  const scrollToBottom = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      })
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div ref={scrollContainerRef} className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900">Gerenciar Áreas/Sistemas</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -105,14 +124,33 @@ const AreaManagement: React.FC<AreaManagementProps> = ({ areas, onAddArea, onEdi
           </button>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
           >
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Nova Área
           </button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600 font-medium">Total de Áreas: {areas.length}</span>
+            <button
+              onClick={scrollToTop}
+              className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-xs"
+              title="Subir para o topo"
+            >
+              <ArrowUp className="h-3 w-3 mr-1" />
+              Subir Tudo
+            </button>
+            <button
+              onClick={scrollToBottom}
+              className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-xs"
+              title="Descer para o final"
+            >
+              <ArrowDown className="h-3 w-3 mr-1" />
+              Descer Tudo
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">

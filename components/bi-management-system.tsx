@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { ChevronUp, Lock, LogOut, Archive } from "lucide-react"
+import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home } from "lucide-react"
 
 import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
@@ -26,13 +26,28 @@ import {
   ArrowUpDown,
 } from "lucide-react"
 import AreaManagement from "./area-management"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import BiForm from "./bi-form"
 import { handleExport } from "@/utils/export-utils"
 import SavesDrawer from "./saves-drawer"
+import AnalysisPage from "./analysis-page"
 import type { BiItem, Stats, Area, SaveData } from "@/types/bi-types"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip" // Importar Tooltip
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarInset,
+  SidebarSeparator,
+} from "@/components/ui/sidebar"
 
 // Funções de persistência
 const STORAGE_KEY_BIS = "bi-management-bis"
@@ -41,7 +56,7 @@ const STORAGE_KEY_SAVES = "bi-management-saves"
 
 // Constantes para autenticação
 const AUTH_KEY = "bi-management-auth"
-const CORRECT_PASSWORD = "GControler4"
+const CORRECT_PASSWORD = "VillaresM"
 
 const saveToLocalStorage = (bis: BiItem[], areas: Area[]) => {
   try {
@@ -90,6 +105,7 @@ const BiManagementSystem = (): ReactElement => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [password, setPassword] = useState("")
   const [authError, setAuthError] = useState("")
+  const [currentPage, setCurrentPage] = useState<"dashboard" | "analysis">("dashboard")
 
   const [bis, setBis] = useState<BiItem[]>([])
   const [filteredBis, setFilteredBis] = useState<BiItem[]>([])
@@ -110,16 +126,16 @@ const BiManagementSystem = (): ReactElement => {
     updatedPages: 0,
     outdatedPages: 0,
     noOwnerPages: 0,
-    updatedPercentage: 0, // Inicializar
-    outdatedPercentage: 0, // Inicializar
-    noOwnerPercentage: 0, // Inicializar
+    updatedPercentage: 0,
+    outdatedPercentage: 0,
+    noOwnerPercentage: 0,
   })
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
   const [showFloatingBar, setShowFloatingBar] = useState(false)
 
   const [areas, setAreas] = useState<Area[]>([])
   const [showAreaManagement, setShowAreaManagement] = useState(false)
-  const [expandedBis, setExpandedBis] = useState<Set<number>>(new Set()) // Corrected initialization
+  const [expandedBis, setExpandedBis] = useState<Set<number>>(new Set())
 
   // Estados para ordenação
   const [sortColumn, setSortColumn] = useState<string | null>(null)
@@ -149,7 +165,7 @@ const BiManagementSystem = (): ReactElement => {
       usage: "Mensal",
       criticality: "Alta",
       description: "Dashboard principal para análise de estoques da VMSA",
-      link: "https://app.powerbi.com/view?r=eyJrIjoiYWJjZGVmZ2hpaiIsInQiOiJjIn0%3D", // Exemplo de link
+      link: "https://app.powerbi.com/view?r=eyJrIjoiYWJjZGVmZ2hpaiIsInQiOiJjIn0%3D",
       pages: [
         {
           id: 1,
@@ -177,13 +193,13 @@ const BiManagementSystem = (): ReactElement => {
       id: 2,
       name: "Estoque Matéria Prima",
       owner: "Bruno Filgueiras Alves",
-      area: ["BW", "Controladoria"], // Exemplo com múltiplas áreas
+      area: ["BW", "Controladoria"],
       status: "Atualizado",
       lastUpdate: "2024-01-10",
       observations: "Formatação do layout",
       usage: "Diário",
       criticality: "Alta",
-      link: "https://app.powerbi.com/view?r=eyJrIjoiZGVmZ2hpamtsIiwidCI6ImNkIn0%3D", // Exemplo de link
+      link: "https://app.powerbi.com/view?r=eyJrIjoiZGVmZ2hpamtsIiwidCI6ImNkIn0%3D",
     },
     {
       id: 3,
@@ -211,7 +227,7 @@ const BiManagementSystem = (): ReactElement => {
       id: 5,
       name: "Relatório Vendas Regional",
       owner: "",
-      area: ["BW", "Vendas"], // Exemplo com múltiplas áreas
+      area: ["BW", "Vendas"],
       status: "Sem responsável",
       lastUpdate: "2024-05-20",
       observations: "BI órfão, necessita definir responsável",
@@ -225,7 +241,7 @@ const BiManagementSystem = (): ReactElement => {
       lastUpdate: "2024-07-10",
       observations: "Monitoramento de linha de produção",
       usage: "Diário",
-      criticality: "", // Exemplo de BI sem criticidade
+      criticality: "",
       pages: [
         {
           id: 1,
@@ -235,7 +251,7 @@ const BiManagementSystem = (): ReactElement => {
           status: "Atualizado",
           lastUpdate: "2024-07-10",
           usage: "Diário",
-          criticality: "", // Exemplo de página sem criticidade
+          criticality: "",
         },
       ],
     },
@@ -279,7 +295,6 @@ const BiManagementSystem = (): ReactElement => {
     if (search) {
       const lowerCaseSearch = search.toLowerCase()
       filtered = filtered.filter((bi) => {
-        // Check BI's own fields
         if (
           bi.name.toLowerCase().includes(lowerCaseSearch) ||
           bi.owner.toLowerCase().includes(lowerCaseSearch) ||
@@ -289,7 +304,6 @@ const BiManagementSystem = (): ReactElement => {
           return true
         }
 
-        // Check BI's pages' fields
         if (bi.pages) {
           return bi.pages.some(
             (page) =>
@@ -812,18 +826,17 @@ const BiManagementSystem = (): ReactElement => {
     URL.revokeObjectURL(url)
   }
 
-  // Helper function to format date
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "-"
     try {
-      const date = new Date(dateString + "T00:00:00") // Add T00:00:00 to ensure correct date parsing for YYYY-MM or YYYY
+      const date = new Date(dateString + "T00:00:00")
       const day = String(date.getDate()).padStart(2, "0")
       const month = String(date.getMonth() + 1).padStart(2, "0")
       const year = date.getFullYear()
       return `${day}/${month}/${year}`
     } catch (error) {
       console.error("Error formatting date:", dateString, error)
-      return dateString // Return original if invalid
+      return dateString
     }
   }
 
@@ -882,580 +895,675 @@ const BiManagementSystem = (): ReactElement => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
-      <button
-        onClick={() => setShowSavesDrawer(true)}
-        className="fixed top-4 right-4 z-30 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors"
-        title="Central de Saves"
-      >
-        <Archive className="h-6 w-6" />
-      </button>
-
-      <div className="max-w-full mx-auto flex-grow w-full px-4 md:px-6">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6 relative">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+    <SidebarProvider defaultOpen={false}>
+      <div className="min-h-screen flex w-full">
+        <Sidebar>
+          <SidebarHeader className="border-b border-sidebar-border p-4 bg-gradient-to-r from-blue-600 to-blue-700">
             <div className="flex items-center space-x-3">
-              <Image src="/favicon.ico" alt="BI Management Icon" width={40} height={40} className="rounded-lg" />
+              <div className="bg-white p-2 rounded-lg">
+                <BarChart3 className="h-6 w-6 text-blue-600" />
+              </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">Gestão e Saneamento de BIs</h1>
-                {currentSaveName && <p className="text-sm text-blue-600 mt-1">Save ativo: {currentSaveName}</p>}
+                <h2 className="text-base font-bold text-white">Gestão de BIs</h2>
+                {currentSaveName && <p className="text-xs text-blue-100">Save: {currentSaveName}</p>}
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 justify-end md:ml-auto">
-              <Button
-                onClick={() => setShowAddForm(true)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar BI
-              </Button>
+          </SidebarHeader>
 
-              <label className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer text-xs">
-                <Upload className="h-4 w-4 mr-2" />
-                Importar Dados
-                <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-              </label>
+          <SidebarContent className="p-2">
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-2">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setCurrentPage("dashboard")}
+                      className={`w-full ${
+                        currentPage === "dashboard"
+                          ? "bg-blue-100 text-blue-700 border-blue-300"
+                          : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                      } border border-blue-200 rounded-lg transition-all duration-200 hover:shadow-md`}
+                      tooltip="Ir para Dashboard Principal"
+                    >
+                      <Home className="h-4 w-4" />
+                      <span className="font-medium">Dashboard</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-              <Button
-                onClick={() => handleExport(bis, areas)}
-                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar Dados
-              </Button>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setCurrentPage("analysis")}
+                      className={`w-full ${
+                        currentPage === "analysis"
+                          ? "bg-purple-100 text-purple-700 border-purple-300"
+                          : "bg-purple-50 hover:bg-purple-100 text-purple-700"
+                      } border border-purple-200 rounded-lg transition-all duration-200 hover:shadow-md`}
+                      tooltip="Ir para Análise e Comparação"
+                    >
+                      <BarChart2 className="h-4 w-4" />
+                      <span className="font-medium">Análise</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-              <Button
-                onClick={() => setShowAreaManagement(true)}
-                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs"
-              >
-                <Building2 className="h-4 w-4 mr-2" />
-                Gerenciar Áreas
-              </Button>
+                  <SidebarSeparator className="my-2" />
 
-              <Button
-                onClick={handleClearData}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
-                title="Limpar dados da sessão atual (não afeta os saves)"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Limpar Sessão
-              </Button>
-              <Button
-                onClick={handleLogout}
-                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs"
-                title="Sair do sistema"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </Button>
-            </div>
-          </div>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setShowAddForm(true)}
+                      className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                      tooltip="Adicionar novo BI"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="font-medium">Adicionar BI</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-            <div className="bg-blue-50 p-3 rounded-lg shadow-sm">
-              <div className="flex items-center">
-                <BarChart3 className="h-7 w-7 text-blue-600 mr-2" />
-                <div>
-                  <p className="text-xs font-medium text-blue-600">Total de BIs</p>
-                  <p className="text-xl font-bold text-blue-900">{stats.total}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg shadow-sm">
-              <div className="flex items-center">
-                <FileText className="h-7 w-7 text-purple-600 mr-2" />
-                <div>
-                  <p className="text-xs font-medium text-purple-600">Total de Páginas</p>
-                  <p className="text-xl font-bold text-purple-900">{stats.totalPages}</p>
-                </div>
-              </div>
-            </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className="bg-green-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
-                    onMouseEnter={() => setIsUpdatedHovered(true)}
-                    onMouseLeave={() => setIsUpdatedHovered(false)}
-                  >
-                    <div className="flex items-center">
-                      <CheckCircle className="h-7 w-7 text-green-600 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium text-green-600">Atualizados</p>
-                        <div className="relative h-6">
-                          <p
-                            className={`absolute inset-0 text-xl font-bold text-green-900 transition-all duration-300 ease-in-out ${
-                              isUpdatedHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
-                            }`}
-                          >
-                            {stats.updated}
-                          </p>
-                          <p
-                            className={`absolute inset-0 text-xl font-bold text-green-900 transition-all duration-300 ease-in-out ${
-                              isUpdatedHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
-                            }`}
-                          >
-                            {stats.updatedPercentage.toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{stats.updatedPercentage.toFixed(1)}% do total de BIs</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className="bg-red-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
-                    onMouseEnter={() => setIsOutdatedHovered(true)}
-                    onMouseLeave={() => setIsOutdatedHovered(false)}
-                  >
-                    <div className="flex items-center">
-                      <XCircle className="h-7 w-7 text-red-600 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium text-red-600">Desatualizados</p>
-                        <div className="relative h-6">
-                          <p
-                            className={`absolute inset-0 text-xl font-bold text-red-900 transition-all duration-300 ease-in-out ${
-                              isOutdatedHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
-                            }`}
-                          >
-                            {stats.outdated}
-                          </p>
-                          <p
-                            className={`absolute inset-0 text-xl font-bold text-red-900 transition-all duration-300 ease-in-out ${
-                              isOutdatedHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
-                            }`}
-                          >
-                            {stats.outdatedPercentage.toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{stats.outdatedPercentage.toFixed(1)}% do total de BIs</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className="bg-yellow-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
-                    onMouseEnter={() => setIsNoOwnerHovered(true)}
-                    onMouseLeave={() => setIsNoOwnerHovered(false)}
-                  >
-                    <div className="flex items-center">
-                      <Users className="h-7 w-7 text-yellow-600 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium text-yellow-600">Sem Responsável</p>
-                        <div className="relative h-6">
-                          <p
-                            className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
-                              isNoOwnerHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
-                            }`}
-                          >
-                            {stats.noOwner}
-                          </p>
-                          <p
-                            className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
-                              isNoOwnerHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
-                            }`}
-                          >
-                            {stats.noOwnerPercentage.toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{stats.noOwnerPercentage.toFixed(1)}% do total de BIs</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className="w-full bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                      tooltip="Importar dados de arquivo JSON"
+                    >
+                      <label className="cursor-pointer flex items-center w-full">
+                        <Upload className="h-4 w-4 mr-2" />
+                        <span className="font-medium">Importar Dados</span>
+                        <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+                      </label>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-          {/* Removed chart section */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => handleExport(bis, areas)}
+                      className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                      tooltip="Exportar todos os dados"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span className="font-medium">Exportar Dados</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-64">
-              <div className="relative">
-                <Search className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nome, responsável, descrições ou observações..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                />
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setShowAreaManagement(true)}
+                      className="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                      tooltip="Gerenciar áreas/sistemas"
+                    >
+                      <Building2 className="h-4 w-4" />
+                      <span className="font-medium">Gerenciar Áreas</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setShowSavesDrawer(true)}
+                      className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                      tooltip="Central de saves e backups"
+                    >
+                      <Archive className="h-4 w-4" />
+                      <span className="font-medium">Central de Saves</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={handleClearData}
+                      className="w-full bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                      tooltip="Limpar dados da sessão atual"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="font-medium">Limpar Sessão</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter className="border-t border-sidebar-border p-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleLogout}
+                  className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                  tooltip="Sair do sistema"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="font-medium">Sair</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+
+        <SidebarInset className="flex-1">
+          <div className="bg-gray-50 min-h-screen">
+            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+              <div className="flex items-center space-x-3">
+                <SidebarTrigger className="hover:bg-gray-100 rounded-md p-2 transition-colors" />
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                  {currentPage === "dashboard" ? "Gestão e Saneamento de BIs" : "Análise e Comparação de Dados"}
+                </h1>
               </div>
             </div>
 
-            <select
-              value={filterArea}
-              onChange={(e) => handleAreaFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-            >
-              <option value="all">Todas as Áreas</option>
-              {areas.map((area) => (
-                <option key={area.id} value={area.name}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-            >
-              <option value="all">Todos os Status</option>
-              <option value="updated">Atualizados</option>
-              <option value="outdated">Desatualizados</option>
-              <option value="no_owner">Sem Responsável</option>
-              <option value="Sem permissão">Sem permissão</option>
-              <option value="Não encontrado">Não encontrado</option>
-              <option value="Descontinuado">Descontinuado</option>
-            </select>
-
-            <select
-              value={filterMonth}
-              onChange={(e) => handleMonthFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-            >
-              <option value="all">Todos os Meses</option>
-              <option value="01">Janeiro</option>
-              <option value="02">Fevereiro</option>
-              <option value="03">Março</option>
-              <option value="04">Abril</option>
-              <option value="05">Maio</option>
-              <option value="06">Junho</option>
-              <option value="07">Julho</option>
-              <option value="08">Agosto</option>
-              <option value="09">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option>
-            </select>
-
-            <select
-              value={filterYear}
-              onChange={(e) => handleYearFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-            >
-              <option value="all">Todos os Anos</option>
-              {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                <option key={year} value={year.toString()}>
-                  {year}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filterCriticality}
-              onChange={(e) => handleCriticalityFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-            >
-              <option value="all">Todas as Criticidades</option>
-              <option value="">Não Aplicável</option>
-              <option value="Alta">Alta</option>
-              <option value="Média">Média</option>
-              <option value="Baixa">Baixa</option>
-            </select>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("name")}
-                  >
-                    <div className="flex items-center">Nome do BI {getSortIcon("name")}</div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("owner")}
-                  >
-                    <div className="flex items-center">Responsável {getSortIcon("owner")}</div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("area")}
-                  >
-                    <div className="flex items-center">Área {getSortIcon("area")}</div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("status")}
-                  >
-                    <div className="flex items-center">Status {getSortIcon("status")}</div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("lastUpdate")}
-                  >
-                    <div className="flex items-center">Última Atualização {getSortIcon("lastUpdate")}</div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("usage")}
-                  >
-                    <div className="flex items-center">Uso {getSortIcon("usage")}</div>
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("criticality")}
-                  >
-                    <div className="flex items-center">Criticidade {getSortIcon("criticality")}</div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredBis.map((bi) => (
-                  <React.Fragment key={bi.id}>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
+            <div className="p-4 md:p-6">
+              {currentPage === "dashboard" ? (
+                <div className="max-w-full mx-auto">
+                  <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+                      <div className="bg-blue-50 p-3 rounded-lg shadow-sm">
                         <div className="flex items-center">
-                          <button
-                            onClick={() => toggleBiExpansion(bi.id)}
-                            className="mr-2 p-1 hover:bg-gray-200 rounded"
-                          >
-                            {expandedBis.has(bi.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </button>
-                          <FileText className="h-5 w-5 text-gray-400 mr-2" />
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-900">{bi.name}</div>
-                            {bi.description && <div className="text-sm text-gray-500">{bi.description}</div>}
-
-                            {/* BI Link only appears when expanded */}
-                            {expandedBis.has(bi.id) && bi.link && (
-                              <div className="mt-2">
-                                <a
-                                  href={bi.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                >
-                                  🔗 Link do BI
-                                </a>
-                              </div>
-                            )}
-
-                            {bi.observations && <div className="text-xs text-gray-400 mt-1">{bi.observations}</div>}
+                          <BarChart3 className="h-7 w-7 text-blue-600 mr-2" />
+                          <div>
+                            <p className="text-xs font-medium text-blue-600">Total de BIs</p>
+                            <p className="text-xl font-bold text-blue-900">{stats.total}</p>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
+                      </div>
+                      <div className="bg-purple-50 p-3 rounded-lg shadow-sm">
                         <div className="flex items-center">
-                          <Users className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-900">{bi.owner || "Sem responsável"}</span>
+                          <FileText className="h-7 w-7 text-purple-600 mr-2" />
+                          <div>
+                            <p className="text-xs font-medium text-purple-600">Total de Páginas</p>
+                            <p className="text-xl font-bold text-purple-900">{stats.totalPages}</p>
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-900">{bi.area.join(", ")}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bi.status)}`}
-                        >
-                          {getStatusIcon(bi.status)}
-                          <span className="ml-1">{bi.status}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{formatDate(bi.lastUpdate)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{bi.usage}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
-                        >
-                          {bi.criticality || "Não Aplicável"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <Button
-                            onClick={() => setEditingBi(bi)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Editar"
-                            variant="ghost"
-                            size="icon"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            onClick={() => handleDeleteBi(bi.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Excluir"
-                            variant="ghost"
-                            size="icon"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {expandedBis.has(bi.id) &&
-                      bi.pages?.map((page) => (
-                        <tr key={`${bi.id}-${page.id}`} className="bg-gray-25 hover:bg-gray-50">
-                          <td className="px-6 py-3">
-                            <div className="flex items-center pl-8">
-                              <div className="w-4 h-4 mr-2"></div>
-                              <FileText className="h-4 w-4 text-gray-300 mr-2" />
-                              <div>
-                                <div className="text-sm text-gray-700">{page.name}</div>
-                                {page.description && <div className="text-xs text-gray-500">{page.description}</div>}
-                                {page.observations && <div className="text-xs text-gray-400">{page.observations}</div>}
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className="bg-green-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
+                              onMouseEnter={() => setIsUpdatedHovered(true)}
+                              onMouseLeave={() => setIsUpdatedHovered(false)}
+                            >
+                              <div className="flex items-center">
+                                <CheckCircle className="h-7 w-7 text-green-600 mr-2" />
+                                <div>
+                                  <p className="text-xs font-medium text-green-600">Atualizados</p>
+                                  <div className="relative h-6">
+                                    <p
+                                      className={`absolute inset-0 text-xl font-bold text-green-900 transition-all duration-300 ease-in-out ${
+                                        isUpdatedHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
+                                      }`}
+                                    >
+                                      {stats.updated}
+                                    </p>
+                                    <p
+                                      className={`absolute inset-0 text-xl font-bold text-green-900 transition-all duration-300 ease-in-out ${
+                                        isUpdatedHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
+                                      }`}
+                                    >
+                                      {stats.updatedPercentage.toFixed(1)}%
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-3">
-                            <div className="flex items-center">
-                              <Users className="h-3 w-3 text-gray-400 mr-2" />
-                              <span className="text-sm text-gray-700">{page.owner || "Sem responsável"}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{stats.updatedPercentage.toFixed(1)}% do total de BIs</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className="bg-red-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
+                              onMouseEnter={() => setIsOutdatedHovered(true)}
+                              onMouseLeave={() => setIsOutdatedHovered(false)}
+                            >
+                              <div className="flex items-center">
+                                <XCircle className="h-7 w-7 text-red-600 mr-2" />
+                                <div>
+                                  <p className="text-xs font-medium text-red-600">Desatualizados</p>
+                                  <div className="relative h-6">
+                                    <p
+                                      className={`absolute inset-0 text-xl font-bold text-red-900 transition-all duration-300 ease-in-out ${
+                                        isOutdatedHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
+                                      }`}
+                                    >
+                                      {stats.outdated}
+                                    </p>
+                                    <p
+                                      className={`absolute inset-0 text-xl font-bold text-red-900 transition-all duration-300 ease-in-out ${
+                                        isOutdatedHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
+                                      }`}
+                                    >
+                                      {stats.outdatedPercentage.toFixed(1)}%
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-3">
-                            <span className="text-sm text-gray-500">-</span>
-                          </td>
-                          <td className="px-6 py-3">
-                            {page.status && (
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(page.status)}`}
-                              >
-                                {getStatusIcon(page.status)}
-                                <span className="ml-1">{page.status}</span>
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-3 text-sm text-gray-500">{formatDate(page.lastUpdate)}</td>
-                          <td className="px-6 py-3 text-sm text-gray-700">{page.usage || "-"}</td>
-                          <td className="px-6 py-3">
-                            {page.criticality !== undefined && (
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
-                              >
-                                {page.criticality || "Não Aplicável"}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-3 text-sm font-medium">
-                            <div className="flex space-x-2">
-                              {/* Botões de edição e exclusão de página agora são gerenciados pelo BiForm */}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{stats.outdatedPercentage.toFixed(1)}% do total de BIs</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className="bg-yellow-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
+                              onMouseEnter={() => setIsNoOwnerHovered(true)}
+                              onMouseLeave={() => setIsNoOwnerHovered(false)}
+                            >
+                              <div className="flex items-center">
+                                <Users className="h-7 w-7 text-yellow-600 mr-2" />
+                                <div>
+                                  <p className="text-xs font-medium text-yellow-600">Sem Responsável</p>
+                                  <div className="relative h-6">
+                                    <p
+                                      className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
+                                        isNoOwnerHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
+                                      }`}
+                                    >
+                                      {stats.noOwner}
+                                    </p>
+                                    <p
+                                      className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
+                                        isNoOwnerHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
+                                      }`}
+                                    >
+                                      {stats.noOwnerPercentage.toFixed(1)}%
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{stats.noOwnerPercentage.toFixed(1)}% do total de BIs</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
 
-          {filteredBis.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhum BI encontrado com os filtros aplicados</p>
+                    <div className="flex flex-wrap gap-4 items-center">
+                      <div className="flex-1 min-w-64">
+                        <div className="relative">
+                          <Search className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Buscar por nome, responsável, descrições ou observações..."
+                            value={searchTerm}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <select
+                        value={filterArea}
+                        onChange={(e) => handleAreaFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                      >
+                        <option value="all">Todas as Áreas</option>
+                        {areas.map((area) => (
+                          <option key={area.id} value={area.name}>
+                            {area.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={filterStatus}
+                        onChange={(e) => handleStatusFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                      >
+                        <option value="all">Todos os Status</option>
+                        <option value="updated">Atualizados</option>
+                        <option value="outdated">Desatualizados</option>
+                        <option value="no_owner">Sem Responsável</option>
+                        <option value="Sem permissão">Sem permissão</option>
+                        <option value="Não encontrado">Não encontrado</option>
+                        <option value="Descontinuado">Descontinuado</option>
+                      </select>
+
+                      <select
+                        value={filterMonth}
+                        onChange={(e) => handleMonthFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                      >
+                        <option value="all">Todos os Meses</option>
+                        <option value="01">Janeiro</option>
+                        <option value="02">Fevereiro</option>
+                        <option value="03">Março</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Maio</option>
+                        <option value="06">Junho</option>
+                        <option value="07">Julho</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                      </select>
+
+                      <select
+                        value={filterYear}
+                        onChange={(e) => handleYearFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                      >
+                        <option value="all">Todos os Anos</option>
+                        {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                          <option key={year} value={year.toString()}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={filterCriticality}
+                        onChange={(e) => handleCriticalityFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                      >
+                        <option value="all">Todas as Criticidades</option>
+                        <option value="">Não Aplicável</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Média">Média</option>
+                        <option value="Baixa">Baixa</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort("name")}
+                            >
+                              <div className="flex items-center">Nome do BI {getSortIcon("name")}</div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort("owner")}
+                            >
+                              <div className="flex items-center">Responsável {getSortIcon("owner")}</div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort("area")}
+                            >
+                              <div className="flex items-center">Área {getSortIcon("area")}</div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort("status")}
+                            >
+                              <div className="flex items-center">Status {getSortIcon("status")}</div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort("lastUpdate")}
+                            >
+                              <div className="flex items-center">Última Atualização {getSortIcon("lastUpdate")}</div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort("usage")}
+                            >
+                              <div className="flex items-center">Uso {getSortIcon("usage")}</div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort("criticality")}
+                            >
+                              <div className="flex items-center">Criticidade {getSortIcon("criticality")}</div>
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Ações
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredBis.map((bi) => (
+                            <React.Fragment key={bi.id}>
+                              <tr className="hover:bg-gray-50">
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center">
+                                    <button
+                                      onClick={() => toggleBiExpansion(bi.id)}
+                                      className="mr-2 p-1 hover:bg-gray-200 rounded"
+                                    >
+                                      {expandedBis.has(bi.id) ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                      )}
+                                    </button>
+                                    <FileText className="h-5 w-5 text-gray-400 mr-2" />
+                                    <div className="flex-1">
+                                      <div className="text-sm font-medium text-gray-900">{bi.name}</div>
+                                      {bi.description && <div className="text-sm text-gray-500">{bi.description}</div>}
+
+                                      {expandedBis.has(bi.id) && bi.link && (
+                                        <div className="mt-2">
+                                          <a
+                                            href={bi.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                          >
+                                            🔗 Link do BI
+                                          </a>
+                                        </div>
+                                      )}
+
+                                      {bi.observations && (
+                                        <div className="text-xs text-gray-400 mt-1">{bi.observations}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center">
+                                    <Users className="h-4 w-4 text-gray-400 mr-2" />
+                                    <span className="text-sm text-gray-900">{bi.owner || "Sem responsável"}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="text-sm text-gray-900">{bi.area.join(", ")}</span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bi.status)}`}
+                                  >
+                                    {getStatusIcon(bi.status)}
+                                    <span className="ml-1">{bi.status}</span>
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{formatDate(bi.lastUpdate)}</td>
+                                <td className="px-6 py-4 text-sm text-gray-900">{bi.usage}</td>
+                                <td className="px-6 py-4">
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
+                                  >
+                                    {bi.criticality || "Não Aplicável"}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm font-medium">
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      onClick={() => setEditingBi(bi)}
+                                      className="text-blue-600 hover:text-blue-900"
+                                      title="Editar"
+                                      variant="ghost"
+                                      size="icon"
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleDeleteBi(bi.id)}
+                                      className="text-red-600 hover:text-red-900"
+                                      title="Excluir"
+                                      variant="ghost"
+                                      size="icon"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+
+                              {expandedBis.has(bi.id) &&
+                                bi.pages?.map((page) => (
+                                  <tr key={`${bi.id}-${page.id}`} className="bg-gray-25 hover:bg-gray-50">
+                                    <td className="px-6 py-3">
+                                      <div className="flex items-center pl-8">
+                                        <div className="w-4 h-4 mr-2"></div>
+                                        <FileText className="h-4 w-4 text-gray-300 mr-2" />
+                                        <div>
+                                          <div className="text-sm text-gray-700">{page.name}</div>
+                                          {page.description && (
+                                            <div className="text-xs text-gray-500">{page.description}</div>
+                                          )}
+                                          {page.observations && (
+                                            <div className="text-xs text-gray-400">{page.observations}</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-3">
+                                      <div className="flex items-center">
+                                        <Users className="h-3 w-3 text-gray-400 mr-2" />
+                                        <span className="text-sm text-gray-700">{page.owner || "Sem responsável"}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-3">
+                                      <span className="text-sm text-gray-500">-</span>
+                                    </td>
+                                    <td className="px-6 py-3">
+                                      {page.status && (
+                                        <span
+                                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(page.status)}`}
+                                        >
+                                          {getStatusIcon(page.status)}
+                                          <span className="ml-1">{page.status}</span>
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-3 text-sm text-gray-500">{formatDate(page.lastUpdate)}</td>
+                                    <td className="px-6 py-3 text-sm text-gray-700">{page.usage || "-"}</td>
+                                    <td className="px-6 py-3">
+                                      {page.criticality !== undefined && (
+                                        <span
+                                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
+                                        >
+                                          {page.criticality || "Não Aplicável"}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-3 text-sm font-medium">
+                                      <div className="flex space-x-2"></div>
+                                    </td>
+                                  </tr>
+                                ))}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {filteredBis.length === 0 && (
+                      <div className="text-center py-12">
+                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500">Nenhum BI encontrado com os filtros aplicados</p>
+                      </div>
+                    )}
+
+                    <div className="p-4 text-sm text-gray-600 border-t border-gray-200 text-center">
+                      <span>
+                        Mostrando {filteredBis.length} de {bis.length} BIs
+                      </span>
+                    </div>
+                  </div>
+
+                  {showFloatingBar && (
+                    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+                      <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-4 border border-gray-200 flex-row text-left">
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
+                          {filteredBis.length} de {bis.length} BIs
+                        </span>
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={scrollToTop}
+                            className="flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 text-xs"
+                            variant="ghost"
+                            size="sm"
+                          >
+                            <ArrowUp className="h-3 w-3 mr-1" />
+                            Início
+                          </Button>
+                          <Button
+                            onClick={scrollToBottom}
+                            className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-xs"
+                            variant="ghost"
+                            size="sm"
+                          >
+                            <ArrowDown className="h-3 w-3 mr-1" />
+                            Fim
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
+                    <p className="text-left">
+                      Desenvolvido por{" "}
+                      <a
+                        href="https://github.com/GiovanneRocha"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        Giovanne Rocha
+                      </a>
+                    </p>
+                  </footer>
+                </div>
+              ) : (
+                <AnalysisPage saves={saves} currentBis={bis} currentAreas={areas} currentSaveName={currentSaveName} />
+              )}
             </div>
-          )}
-
-          <div className="p-4 text-sm text-gray-600 border-t border-gray-200 text-center">
-            <span>
-              Mostrando {filteredBis.length} de {bis.length} BIs
-            </span>
           </div>
-        </div>
-      </div>
+        </SidebarInset>
 
-      {showFloatingBar && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-4 border border-gray-200 flex-row text-left">
-            <span className="text-sm text-gray-600 whitespace-nowrap">
-              {filteredBis.length} de {bis.length} BIs
-            </span>
-            <div className="flex space-x-2">
-              <Button
-                onClick={scrollToTop}
-                className="flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 text-xs"
-                variant="ghost"
-                size="sm"
-              >
-                <ArrowUp className="h-3 w-3 mr-1" />
-                Início
-              </Button>
-              <Button
-                onClick={scrollToBottom}
-                className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-xs"
-                variant="ghost"
-                size="sm"
-              >
-                <ArrowDown className="h-3 w-3 mr-1" />
-                Fim
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <SavesDrawer
-        isOpen={showSavesDrawer}
-        onClose={() => setShowSavesDrawer(false)}
-        currentBis={bis}
-        currentAreas={areas}
-        onLoadSave={handleLoadSave}
-        saves={saves}
-        onSaveCurrent={handleSaveCurrent}
-        onDeleteSave={handleDeleteSave}
-        onImportSave={handleImportSave}
-        onExportSave={handleExportSave}
-      />
-
-      {showAddForm && <BiForm onSave={handleAddBi} onCancel={() => setShowAddForm(false)} areas={areas} />}
-
-      {editingBi && <BiForm bi={editingBi} onSave={handleEditBi} onCancel={() => setEditingBi(null)} areas={areas} />}
-
-      {showAreaManagement && (
-        <AreaManagement
-          areas={areas}
-          onAddArea={handleAddArea}
-          onEditArea={handleEditArea}
-          onDeleteArea={handleDeleteArea}
-          onClose={() => setShowAreaManagement(false)}
+        <SavesDrawer
+          isOpen={showSavesDrawer}
+          onClose={() => setShowSavesDrawer(false)}
+          currentBis={bis}
+          currentAreas={areas}
+          onLoadSave={handleLoadSave}
+          saves={saves}
+          onSaveCurrent={handleSaveCurrent}
+          onDeleteSave={handleDeleteSave}
+          onImportSave={handleImportSave}
+          onExportSave={handleExportSave}
         />
-      )}
 
-      <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
-        <p className="text-left">
-          Desenvolvido por{" "}
-          <a
-            href="https://github.com/GiovanneRocha"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            Giovanne Rocha
-          </a>
-        </p>
-      </footer>
-    </div>
+        {showAddForm && <BiForm onSave={handleAddBi} onCancel={() => setShowAddForm(false)} areas={areas} />}
+
+        {editingBi && <BiForm bi={editingBi} onSave={handleEditBi} onCancel={() => setEditingBi(null)} areas={areas} />}
+
+        {showAreaManagement && (
+          <AreaManagement
+            areas={areas}
+            onAddArea={handleAddArea}
+            onEditArea={handleEditArea}
+            onDeleteArea={handleDeleteArea}
+            onClose={() => setShowAreaManagement(false)}
+          />
+        )}
+      </div>
+    </SidebarProvider>
   )
 }
 

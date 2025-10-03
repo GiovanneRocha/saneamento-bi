@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home } from "lucide-react"
+import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home, GitCompare } from "lucide-react"
 
 import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
@@ -26,6 +26,7 @@ import {
   ArrowUpDown,
 } from "lucide-react"
 import AreaManagement from "./area-management"
+import BiComparison from "./bi-comparison"
 import { Button } from "@/components/ui/button"
 import BiForm from "./bi-form"
 import { handleExport } from "@/utils/export-utils"
@@ -105,7 +106,7 @@ const BiManagementSystem = (): ReactElement => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [password, setPassword] = useState("")
   const [authError, setAuthError] = useState("")
-  const [currentPage, setCurrentPage] = useState<"dashboard" | "analysis">("dashboard")
+  const [currentPage, setCurrentPage] = useState<"dashboard" | "analysis" | "comparison">("dashboard")
 
   const [bis, setBis] = useState<BiItem[]>([])
   const [filteredBis, setFilteredBis] = useState<BiItem[]>([])
@@ -121,14 +122,14 @@ const BiManagementSystem = (): ReactElement => {
     total: 0,
     updated: 0,
     outdated: 0,
-    noOwner: 0,
+    discontinued: 0,
     totalPages: 0,
     updatedPages: 0,
     outdatedPages: 0,
     noOwnerPages: 0,
     updatedPercentage: 0,
     outdatedPercentage: 0,
-    noOwnerPercentage: 0,
+    discontinuedPercentage: 0,
   })
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false)
   const [showFloatingBar, setShowFloatingBar] = useState(false)
@@ -148,7 +149,7 @@ const BiManagementSystem = (): ReactElement => {
   // States for hover effect on status cards
   const [isUpdatedHovered, setIsUpdatedHovered] = useState(false)
   const [isOutdatedHovered, setIsOutdatedHovered] = useState(false)
-  const [isNoOwnerHovered, setIsNoOwnerHovered] = useState(false)
+  const [isDiscontinuedHovered, setIsDiscontinuedHovered] = useState(false)
 
   const [currentSaveName, setCurrentSaveName] = useState<string | null>(null)
 
@@ -298,7 +299,7 @@ const BiManagementSystem = (): ReactElement => {
         if (
           bi.name.toLowerCase().includes(lowerCaseSearch) ||
           bi.owner.toLowerCase().includes(lowerCaseSearch) ||
-          bi.observations.toLowerCase().includes(lowerCaseSearch) ||
+          (bi.observations && bi.observations.toLowerCase().includes(lowerCaseSearch)) ||
           (bi.description && bi.description.toLowerCase().includes(lowerCaseSearch))
         ) {
           return true
@@ -308,7 +309,7 @@ const BiManagementSystem = (): ReactElement => {
           return bi.pages.some(
             (page) =>
               page.name.toLowerCase().includes(lowerCaseSearch) ||
-              page.owner.toLowerCase().includes(lowerCaseSearch) ||
+              (page.owner && page.owner.toLowerCase().includes(lowerCaseSearch)) ||
               (page.description && page.description.toLowerCase().includes(lowerCaseSearch)) ||
               (page.observations && page.observations.toLowerCase().includes(lowerCaseSearch)),
           )
@@ -322,14 +323,12 @@ const BiManagementSystem = (): ReactElement => {
         filtered = filtered.filter((bi) => bi.status === "Atualizado")
       } else if (status === "outdated") {
         filtered = filtered.filter((bi) => bi.status.includes("Desatualizado"))
-      } else if (status === "no_owner") {
-        filtered = filtered.filter((bi) => !bi.owner || bi.owner === "")
+      } else if (status === "discontinued") {
+        filtered = filtered.filter((bi) => bi.status === "Descontinuado")
       } else if (status === "Sem permissão") {
         filtered = filtered.filter((bi) => bi.status === "Sem permissão")
       } else if (status === "Não encontrado") {
         filtered = filtered.filter((bi) => bi.status === "Não encontrado")
-      } else if (status === "Descontinuado") {
-        filtered = filtered.filter((bi) => bi.status === "Descontinuado")
       }
     }
 
@@ -458,7 +457,7 @@ const BiManagementSystem = (): ReactElement => {
     const totalBis = data.length
     const updatedBis = data.filter((bi) => bi.status === "Atualizado").length
     const outdatedBis = data.filter((bi) => bi.status.includes("Desatualizado")).length
-    const noOwnerBis = data.filter((bi) => !bi.owner || bi.owner === "").length
+    const discontinuedBis = data.filter((bi) => bi.status === "Descontinuado").length
 
     const totalPages = data.reduce((sum, bi) => sum + (bi.pages?.length || 0), 0)
     const updatedPages = data.reduce(
@@ -478,14 +477,14 @@ const BiManagementSystem = (): ReactElement => {
       total: totalBis,
       updated: updatedBis,
       outdated: outdatedBis,
-      noOwner: noOwnerBis,
+      discontinued: discontinuedBis,
       totalPages,
       updatedPages,
       outdatedPages,
       noOwnerPages,
       updatedPercentage: totalBis > 0 ? (updatedBis / totalBis) * 100 : 0,
       outdatedPercentage: totalBis > 0 ? (outdatedBis / totalBis) * 100 : 0,
-      noOwnerPercentage: totalBis > 0 ? (noOwnerBis / totalBis) * 100 : 0,
+      discontinuedPercentage: totalBis > 0 ? (discontinuedBis / totalBis) * 100 : 0,
     }
     setStats(newStats)
   }
@@ -738,7 +737,7 @@ const BiManagementSystem = (): ReactElement => {
         total: stats.total,
         updated: stats.updated,
         outdated: stats.outdated,
-        noOwner: stats.noOwner,
+        discontinued: stats.discontinued,
       },
     }
 
@@ -830,10 +829,9 @@ const BiManagementSystem = (): ReactElement => {
     if (!dateString) return "-"
     try {
       const date = new Date(dateString + "T00:00:00")
-      const day = String(date.getDate()).padStart(2, "0")
       const month = String(date.getMonth() + 1).padStart(2, "0")
       const year = date.getFullYear()
-      return `${day}/${month}/${year}`
+      return `${month}/${year}`
     } catch (error) {
       console.error("Error formatting date:", dateString, error)
       return dateString
@@ -944,6 +942,21 @@ const BiManagementSystem = (): ReactElement => {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setCurrentPage("comparison")}
+                      className={`w-full ${
+                        currentPage === "comparison"
+                          ? "bg-indigo-100 text-indigo-700 border-indigo-300"
+                          : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700"
+                      } border border-indigo-200 rounded-lg transition-all duration-200 hover:shadow-md`}
+                      tooltip="Comparar BIs entre Saves"
+                    >
+                      <GitCompare className="h-4 w-4" />
+                      <span className="font-medium">Comparar BIs</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
                   <SidebarSeparator className="my-2" />
 
                   <SidebarMenuItem>
@@ -1041,7 +1054,11 @@ const BiManagementSystem = (): ReactElement => {
               <div className="flex items-center space-x-3">
                 <SidebarTrigger className="hover:bg-gray-100 rounded-md p-2 transition-colors" />
                 <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                  {currentPage === "dashboard" ? "Gestão e Saneamento de BIs" : "Análise e Comparação de Dados"}
+                  {currentPage === "dashboard"
+                    ? "Gestão e Saneamento de BIs"
+                    : currentPage === "analysis"
+                      ? "Análise e Comparação de Dados"
+                      : "Comparação de BIs"}
                 </h1>
               </div>
             </div>
@@ -1147,28 +1164,32 @@ const BiManagementSystem = (): ReactElement => {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
-                              className="bg-yellow-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
-                              onMouseEnter={() => setIsNoOwnerHovered(true)}
-                              onMouseLeave={() => setIsNoOwnerHovered(false)}
+                              className="bg-orange-50 p-3 rounded-lg cursor-help relative overflow-hidden shadow-sm"
+                              onMouseEnter={() => setIsDiscontinuedHovered(true)}
+                              onMouseLeave={() => setIsDiscontinuedHovered(false)}
                             >
                               <div className="flex items-center">
-                                <Users className="h-7 w-7 text-yellow-600 mr-2" />
+                                <AlertCircle className="h-7 w-7 text-orange-600 mr-2" />
                                 <div>
-                                  <p className="text-xs font-medium text-yellow-600">Sem Responsável</p>
+                                  <p className="text-xs font-medium text-orange-600">Descontinuados</p>
                                   <div className="relative h-6">
                                     <p
-                                      className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
-                                        isNoOwnerHovered ? "opacity-0 -translate-y-full" : "opacity-100 translate-y-0"
+                                      className={`absolute inset-0 text-xl font-bold text-orange-900 transition-all duration-300 ease-in-out ${
+                                        isDiscontinuedHovered
+                                          ? "opacity-0 -translate-y-full"
+                                          : "opacity-100 translate-y-0"
                                       }`}
                                     >
-                                      {stats.noOwner}
+                                      {stats.discontinued}
                                     </p>
                                     <p
-                                      className={`absolute inset-0 text-xl font-bold text-yellow-900 transition-all duration-300 ease-in-out ${
-                                        isNoOwnerHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"
+                                      className={`absolute inset-0 text-xl font-bold text-orange-900 transition-all duration-300 ease-in-out ${
+                                        isDiscontinuedHovered
+                                          ? "opacity-100 translate-y-0"
+                                          : "opacity-0 translate-y-full"
                                       }`}
                                     >
-                                      {stats.noOwnerPercentage.toFixed(1)}%
+                                      {stats.discontinuedPercentage.toFixed(1)}%
                                     </p>
                                   </div>
                                 </div>
@@ -1176,7 +1197,7 @@ const BiManagementSystem = (): ReactElement => {
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{stats.noOwnerPercentage.toFixed(1)}% do total de BIs</p>
+                            <p>{stats.discontinuedPercentage.toFixed(1)}% do total de BIs</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1217,10 +1238,9 @@ const BiManagementSystem = (): ReactElement => {
                         <option value="all">Todos os Status</option>
                         <option value="updated">Atualizados</option>
                         <option value="outdated">Desatualizados</option>
-                        <option value="no_owner">Sem Responsável</option>
+                        <option value="discontinued">Descontinuados</option>
                         <option value="Sem permissão">Sem permissão</option>
                         <option value="Não encontrado">Não encontrado</option>
-                        <option value="Descontinuado">Descontinuado</option>
                       </select>
 
                       <select
@@ -1325,7 +1345,9 @@ const BiManagementSystem = (): ReactElement => {
                         <tbody className="bg-white divide-y divide-gray-200">
                           {filteredBis.map((bi) => (
                             <React.Fragment key={bi.id}>
-                              <tr className="hover:bg-gray-50">
+                              <tr
+                                className={`hover:bg-gray-50 ${expandedBis.has(bi.id) ? "border-l-4 border-l-blue-500 bg-blue-50" : ""}`}
+                              >
                                 <td className="px-6 py-4">
                                   <div className="flex items-center">
                                     <button
@@ -1333,7 +1355,7 @@ const BiManagementSystem = (): ReactElement => {
                                       className="mr-2 p-1 hover:bg-gray-200 rounded"
                                     >
                                       {expandedBis.has(bi.id) ? (
-                                        <ChevronDown className="h-4 w-4" />
+                                        <ChevronDown className="h-4 w-4 text-blue-600" />
                                       ) : (
                                         <ChevronRight className="h-4 w-4" />
                                       )}
@@ -1342,23 +1364,6 @@ const BiManagementSystem = (): ReactElement => {
                                     <div className="flex-1">
                                       <div className="text-sm font-medium text-gray-900">{bi.name}</div>
                                       {bi.description && <div className="text-sm text-gray-500">{bi.description}</div>}
-
-                                      {expandedBis.has(bi.id) && bi.link && (
-                                        <div className="mt-2">
-                                          <a
-                                            href={bi.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                          >
-                                            🔗 Link do BI
-                                          </a>
-                                        </div>
-                                      )}
-
-                                      {bi.observations && (
-                                        <div className="text-xs text-gray-400 mt-1">{bi.observations}</div>
-                                      )}
                                     </div>
                                   </div>
                                 </td>
@@ -1412,6 +1417,44 @@ const BiManagementSystem = (): ReactElement => {
                                 </td>
                               </tr>
 
+                              {expandedBis.has(bi.id) && (
+                                <tr className="bg-blue-50">
+                                  <td colSpan={8} className="p-0">
+                                    <div className="px-6 py-3">
+                                      <div className="space-y-2 text-sm">
+                                        {bi.pages && bi.pages.length > 0 && (
+                                          <div>
+                                            <span className="font-medium text-gray-700">Páginas:</span>
+                                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                              {bi.pages.length} {bi.pages.length === 1 ? "página" : "páginas"}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {bi.observations && (
+                                          <div>
+                                            <span className="font-medium text-gray-700">Observações:</span>
+                                            <p className="text-gray-600 mt-1">{bi.observations}</p>
+                                          </div>
+                                        )}
+                                        {bi.link && (
+                                          <div>
+                                            <span className="font-medium text-gray-700">Link:</span>
+                                            <a
+                                              href={bi.link}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium ml-2"
+                                            >
+                                              🔗 Acessar BI
+                                            </a>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+
                               {expandedBis.has(bi.id) &&
                                 bi.pages?.map((page) => (
                                   <tr key={`${bi.id}-${page.id}`} className="bg-gray-25 hover:bg-gray-50">
@@ -1421,9 +1464,6 @@ const BiManagementSystem = (): ReactElement => {
                                         <FileText className="h-4 w-4 text-gray-300 mr-2" />
                                         <div>
                                           <div className="text-sm text-gray-700">{page.name}</div>
-                                          {page.description && (
-                                            <div className="text-xs text-gray-500">{page.description}</div>
-                                          )}
                                           {page.observations && (
                                             <div className="text-xs text-gray-400">{page.observations}</div>
                                           )}
@@ -1431,10 +1471,7 @@ const BiManagementSystem = (): ReactElement => {
                                       </div>
                                     </td>
                                     <td className="px-6 py-3">
-                                      <div className="flex items-center">
-                                        <Users className="h-3 w-3 text-gray-400 mr-2" />
-                                        <span className="text-sm text-gray-700">{page.owner || "Sem responsável"}</span>
-                                      </div>
+                                      <span className="text-sm text-gray-500">-</span>
                                     </td>
                                     <td className="px-6 py-3">
                                       <span className="text-sm text-gray-500">-</span>
@@ -1449,8 +1486,12 @@ const BiManagementSystem = (): ReactElement => {
                                         </span>
                                       )}
                                     </td>
-                                    <td className="px-6 py-3 text-sm text-gray-500">{formatDate(page.lastUpdate)}</td>
-                                    <td className="px-6 py-3 text-sm text-gray-700">{page.usage || "-"}</td>
+                                    <td className="px-6 py-3">
+                                      <span className="text-sm text-gray-500">-</span>
+                                    </td>
+                                    <td className="px-6 py-3">
+                                      <span className="text-sm text-gray-500">-</span>
+                                    </td>
                                     <td className="px-6 py-3">
                                       {page.criticality !== undefined && (
                                         <span
@@ -1529,8 +1570,10 @@ const BiManagementSystem = (): ReactElement => {
                     </p>
                   </footer>
                 </div>
-              ) : (
+              ) : currentPage === "analysis" ? (
                 <AnalysisPage saves={saves} currentBis={bis} currentAreas={areas} currentSaveName={currentSaveName} />
+              ) : (
+                <BiComparison saves={saves} currentBis={bis} currentSaveName={currentSaveName} />
               )}
             </div>
           </div>

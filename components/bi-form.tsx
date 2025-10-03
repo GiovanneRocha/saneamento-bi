@@ -122,11 +122,6 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
-    // Removed mandatory checks for name, owner, area, status, lastUpdate
-    // if (!formData.name.trim()) newErrors.name = "Nome é obrigatório."
-    // if (!formData.owner.trim()) newErrors.owner = "Responsável é obrigatório."
-    // if (formData.area.length === 0) newErrors.area = "Área é obrigatória."
-    // if (!formData.status.trim()) newErrors.status = "Status é obrigatório."
 
     // Validate lastUpdate format (still important for date parsing)
     const lastUpdateValue = formData.lastUpdate.trim()
@@ -382,7 +377,9 @@ const BiForm: React.FC<BiFormProps> = ({ bi, onSave, onCancel, areas }) => {
                   >
                     <div>
                       <p className="font-medium text-gray-900">{page.name}</p>
-                      <p className="text-sm text-gray-600">{page.description}</p>
+                      {page.status && <p className="text-sm text-gray-600">Status: {page.status}</p>}
+                      {page.criticality && <p className="text-sm text-gray-600">Criticidade: {page.criticality}</p>}
+                      {page.observations && <p className="text-sm text-gray-500">{page.observations}</p>}
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -451,11 +448,7 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Page | Omit<Page, "id">>(
     page || {
       name: "",
-      owner: "",
-      description: "",
       status: "",
-      lastUpdate: "",
-      usage: "",
       criticality: "",
       observations: "",
     },
@@ -468,17 +461,12 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
     } else {
       setFormData({
         name: "",
-        owner: "",
-        // area: [], // Pages do not have an 'area' field, removed this line
         status: "",
-        lastUpdate: "",
-        usage: "",
         criticality: "",
-        description: "",
         observations: "",
       })
     }
-    setErrors({}) // Clear errors on form open/reset
+    setErrors({})
   }, [page])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -498,17 +486,6 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
-    // Removed mandatory checks for name, owner, status, lastUpdate
-    // if (!formData.name.trim()) newErrors.name = "Nome da página é obrigatório."
-    // if (!formData.owner.trim()) newErrors.owner = "Responsável da página é obrigatório."
-    // if (!formData.status.trim()) newErrors.status = "Status da página é obrigatório."
-
-    // Validate lastUpdate format (still important for date parsing)
-    const lastUpdateValue = formData.lastUpdate.trim()
-    if (lastUpdateValue && !/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.test(lastUpdateValue)) {
-      newErrors.lastUpdate = "Formato de data inválido. Use YYYY-MM-DD, YYYY-MM ou YYYY."
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -516,18 +493,7 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      let normalizedLastUpdate = formData.lastUpdate.trim()
-      const parts = normalizedLastUpdate.split("-")
-      if (parts.length === 1) {
-        // Only year
-        normalizedLastUpdate = `${parts[0]}-01-01`
-      } else if (parts.length === 2) {
-        // Year and month
-        normalizedLastUpdate = `${parts[0]}-${parts[1]}-01`
-      }
-      // If parts.length === 3, it's already YYYY-MM-DD, no change needed.
-
-      onSave({ ...formData, lastUpdate: normalizedLastUpdate })
+      onSave(formData)
     }
   }
 
@@ -542,7 +508,7 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
         <form onSubmit={handleSubmit} className="grid gap-6 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
             {/* Nome da Página */}
-            <div>
+            <div className="md:col-span-2">
               <Label htmlFor="pageName" className="block text-sm font-medium text-gray-700 mb-1">
                 Nome da Página
               </Label>
@@ -554,21 +520,6 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
                 className={cn("w-full shadow-sm", errors.name && "border-red-500")}
               />
               {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-            </div>
-
-            {/* Responsável */}
-            <div>
-              <Label htmlFor="pageOwner" className="block text-sm font-medium text-gray-700 mb-1">
-                Responsável
-              </Label>
-              <Input
-                id="pageOwner"
-                name="owner"
-                value={formData.owner}
-                onChange={handleChange}
-                className={cn("w-full shadow-sm", errors.owner && "border-red-500")}
-              />
-              {errors.owner && <p className="text-red-500 text-xs mt-1">{errors.owner}</p>}
             </div>
 
             {/* Status */}
@@ -598,44 +549,6 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
               {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
             </div>
 
-            {/* Última Atualização */}
-            <div>
-              <Label htmlFor="pageLastUpdate" className="block text-sm font-medium text-gray-700 mb-1">
-                Última Atualização
-              </Label>
-              <Input
-                id="pageLastUpdate"
-                name="lastUpdate"
-                type="text"
-                value={formData.lastUpdate}
-                onChange={handleChange}
-                className={cn("w-full shadow-sm", errors.lastUpdate && "border-red-500")}
-                placeholder="YYYY-MM-DD, YYYY-MM ou YYYY"
-              />
-              {errors.lastUpdate && <p className="text-red-500 text-xs mt-1">{errors.lastUpdate}</p>}
-            </div>
-
-            {/* Uso */}
-            <div>
-              <Label htmlFor="pageUsage" className="block text-sm font-medium text-gray-700 mb-1">
-                Uso
-              </Label>
-              <Select name="usage" value={formData.usage} onValueChange={(value) => handleSelectChange("usage", value)}>
-                <SelectTrigger className="w-full shadow-sm">
-                  <SelectValue placeholder="Selecione a frequência de uso" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Selecione a frequência de uso</SelectItem>
-                  <SelectItem value="Diário">Diário</SelectItem>
-                  <SelectItem value="Semanal">Semanal</SelectItem>
-                  <SelectItem value="Mensal">Mensal</SelectItem>
-                  <SelectItem value="Trimestral">Trimestral</SelectItem>
-                  <SelectItem value="Anual">Anual</SelectItem>
-                  <SelectItem value="Inativo">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Criticidade */}
             <div>
               <Label htmlFor="pageCriticality" className="block text-sm font-medium text-gray-700 mb-1">
@@ -656,20 +569,6 @@ const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
                   <SelectItem value="default">Não Aplicável</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Descrição */}
-            <div className="md:col-span-2">
-              <Label htmlFor="pageDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                Descrição
-              </Label>
-              <Textarea
-                id="pageDescription"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full shadow-sm"
-              />
             </div>
 
             {/* Observações */}

@@ -35,15 +35,14 @@ export interface Stats {
   total: number
   updated: number
   outdated: number
-  noOwner: number
+  discontinued: number
   totalPages: number
   updatedPages: number
   outdatedPages: number
   noOwnerPages: number
-  // Novas propriedades para porcentagens
   updatedPercentage: number
   outdatedPercentage: number
-  noOwnerPercentage: number
+  discontinuedPercentage: number
 }
 
 export interface SaveData {
@@ -57,6 +56,6 @@ export interface SaveData {
     total: number
     updated: number
     outdated: number
-    noOwner: number
+    discontinued: number
   }
 }

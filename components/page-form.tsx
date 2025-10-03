@@ -1,165 +1,139 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import type { Page } from "@/types/bi-types" // Importar Page da nova localização
+import { useState, useEffect } from "react"
+import { X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import type { Page } from "@/types/bi-types"
 
 interface PageFormProps {
   page?: Page
-  onSave: (page: Page | Omit<Page, "id">) => void // Alterado para retornar apenas a página
+  onSave: (page: Omit<Page, "id"> | Page) => void
   onCancel: () => void
 }
 
 const PageForm: React.FC<PageFormProps> = ({ page, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Omit<Page, "id">>({
-    name: page?.name || "",
-    owner: page?.owner || "",
-    description: page?.description || "",
-    status: page?.status || "Atualizado",
-    lastUpdate: page?.lastUpdate || "",
-    observations: page?.observations || "",
-    usage: page?.usage || "Mensal",
-    criticality: page?.criticality || "",
+    name: "",
+    status: "",
+    observations: "",
+    criticality: "",
   })
 
-  const handleSubmit = () => {
-    if (formData.name.trim()) {
-      if (page) {
-        onSave({ ...formData, id: page.id })
-      } else {
-        onSave(formData)
-      }
+  useEffect(() => {
+    if (page) {
+      setFormData({
+        name: page.name,
+        status: page.status || "",
+        observations: page.observations || "",
+        criticality: page.criticality || "",
+      })
+    }
+  }, [page])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (page) {
+      onSave({ ...formData, id: page.id })
     } else {
-      alert("Por favor, preencha o nome da página.")
+      onSave(formData)
     }
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">{page ? "Editar Página" : "Adicionar Nova Página"}</h3>
-
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Página *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Responsável</label>
-              <input
-                type="text"
-                value={formData.owner}
-                onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="Atualizado">Atualizado</option>
-                <option value="Desatualizado">Desatualizado</option>
-                <option value="Em revisão">Em revisão</option>
-                <option value="Descontinuado">Descontinuado</option>
-                <option value="Sem responsável">Sem responsável</option>
-                <option value="Sem permissão">Sem permissão</option>
-                <option value="Não encontrado">Não encontrado</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Data da Última Atualização</label>
-              <input
-                type="date"
-                value={formData.lastUpdate}
-                onChange={(e) => setFormData({ ...formData, lastUpdate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Frequência de Uso</label>
-              <select
-                value={formData.usage}
-                onChange={(e) => setFormData({ ...formData, usage: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="Diário">Diário</option>
-                <option value="Semanal">Semanal</option>
-                <option value="Mensal">Mensal</option>
-                <option value="Trimestral">Trimestral</option>
-                <option value="Anual">Anual</option>
-                <option value="Sob demanda">Sob demanda</option>
-                <option value="Não utilizado">Não utilizado</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Criticidade</label>
-              <select
-                value={formData.criticality}
-                onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Não Aplicável</option>
-                <option value="Alta">Alta</option>
-                <option value="Média">Média</option>
-                <option value="Baixa">Baixa</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Descrição da página..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-            <textarea
-              value={formData.observations}
-              onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Observações, problemas identificados, melhorias necessárias..."
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              {page ? "Salvar Alterações" : "Adicionar Página"}
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900">{page ? "Editar Página" : "Adicionar Página"}</h2>
+          <Button onClick={onCancel} variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </Button>
         </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              Nome da Página *
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Digite o nome da página"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Selecione o status</option>
+              <option value="Atualizado">Atualizado</option>
+              <option value="Desatualizado">Desatualizado</option>
+              <option value="Em revisão">Em revisão</option>
+              <option value="Sem permissão">Sem permissão</option>
+              <option value="Não encontrado">Não encontrado</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="criticality" className="block text-sm font-medium text-gray-700 mb-2">
+              Criticidade
+            </label>
+            <select
+              id="criticality"
+              name="criticality"
+              value={formData.criticality}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Não Aplicável</option>
+              <option value="Alta">Alta</option>
+              <option value="Média">Média</option>
+              <option value="Baixa">Baixa</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="observations" className="block text-sm font-medium text-gray-700 mb-2">
+              Observações
+            </label>
+            <textarea
+              id="observations"
+              name="observations"
+              value={formData.observations}
+              onChange={handleChange}
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Observações sobre a página"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+            <Button type="button" onClick={onCancel} variant="outline">
+              Cancelar
+            </Button>
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
+              {page ? "Salvar Alterações" : "Adicionar Página"}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   )

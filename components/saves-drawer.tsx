@@ -14,6 +14,7 @@ import {
   CheckCircle,
   XCircle,
   Users,
+  FileSpreadsheet,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -110,19 +111,6 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
     })
   }
 
-  const getStatsColor = (type: "updated" | "outdated" | "noOwner") => {
-    switch (type) {
-      case "updated":
-        return "text-green-600"
-      case "outdated":
-        return "text-red-600"
-      case "noOwner":
-        return "text-yellow-600"
-      default:
-        return "text-gray-600"
-    }
-  }
-
   const currentStats = {
     total: currentBis.length,
     updated: currentBis.filter((bi) => bi.status === "Atualizado").length,
@@ -140,9 +128,17 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
       {/* Drawer */}
       <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl z-50 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Central de Saves</h2>
-          <Button onClick={onClose} variant="ghost" size="icon">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+          <div className="flex items-center space-x-3">
+            <div className="bg-white p-2 rounded-lg">
+              <FileSpreadsheet className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">Central de Saves</h2>
+              <p className="text-sm text-blue-100">Gerencie seus saves em Excel</p>
+            </div>
+          </div>
+          <Button onClick={onClose} variant="ghost" size="icon" className="text-white hover:bg-blue-500">
             <X className="h-6 w-6" />
           </Button>
         </div>
@@ -178,7 +174,7 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                   <span className="text-purple-700">{currentAreas.length} Áreas</span>
                 </div>
               </div>
-              <div className="mt-4 flex space-x-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Button
                   onClick={() => setShowSaveForm(true)}
                   className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs"
@@ -188,8 +184,8 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                 </Button>
                 <label className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer text-xs">
                   <Upload className="h-3 w-3 mr-1" />
-                  Importar Save
-                  <input type="file" accept=".json" onChange={handleImportFile} className="hidden" />
+                  Importar Save Excel
+                  <input type="file" accept=".xlsx,.xls" onChange={handleImportFile} className="hidden" />
                 </label>
               </div>
             </div>
@@ -250,7 +246,7 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Saves Salvos ({saves.length})</h3>
             {saves.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                <Save className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <FileSpreadsheet className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p>Nenhum save criado ainda</p>
                 <p className="text-sm">Salve o estado atual para começar</p>
               </div>
@@ -265,9 +261,12 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 text-sm">{save.name}</h4>
-                          {save.description && <p className="text-xs text-gray-600 mt-1">{save.description}</p>}
-                          <div className="flex items-center mt-2 text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <FileSpreadsheet className="h-4 w-4 text-green-600 mr-2" />
+                            <h4 className="font-semibold text-gray-900 text-sm">{save.name}</h4>
+                          </div>
+                          {save.description && <p className="text-xs text-gray-600 mt-1 ml-6">{save.description}</p>}
+                          <div className="flex items-center mt-2 text-xs text-gray-500 ml-6">
                             <Calendar className="h-3 w-3 mr-1" />
                             {formatDate(save.createdAt)}
                           </div>
@@ -275,8 +274,8 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                         <div className="flex space-x-1 ml-3">
                           <Button
                             onClick={() => onExportSave(save)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Exportar Save"
+                            className="text-green-600 hover:text-green-900"
+                            title="Exportar Save Excel"
                             variant="ghost"
                             size="icon"
                           >
@@ -295,7 +294,7 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                       </div>
 
                       {/* Stats */}
-                      <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                      <div className="grid grid-cols-2 gap-2 mb-3 text-xs ml-6">
                         <div className="flex items-center">
                           <BarChart3 className="h-3 w-3 text-blue-600 mr-1" />
                           <span className="text-blue-700">{save.stats.total} BIs</span>
@@ -317,7 +316,8 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                       {/* Load Button */}
                       <Button
                         onClick={() => onLoadSave(save)}
-                        className="w-full flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs"
+                        className="w-full flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs ml-6"
+                        style={{ width: "calc(100% - 1.5rem)" }}
                       >
                         <Upload className="h-3 w-3 mr-1" />
                         Carregar Save

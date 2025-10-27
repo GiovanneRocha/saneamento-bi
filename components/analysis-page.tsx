@@ -4,20 +4,17 @@ import type React from "react"
 import { useState, useMemo } from "react"
 import {
   BarChart3,
-  TrendingUp,
   Filter,
   X,
   Download,
   CheckCircle,
   XCircle,
   FileText,
-  Calendar,
-  ArrowUpDown,
   AlertCircle,
-  PieChartIcon,
   GitCompare,
   Layers,
   Target,
+  Link,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,10 +25,6 @@ import type { SaveData, BiItem, Area } from "@/types/bi-types"
 import {
   Bar,
   BarChart,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
   Cell,
   XAxis,
   YAxis,
@@ -44,7 +37,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
 } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartTooltip } from "@/components/ui/chart"
 
 interface AnalysisPageProps {
   saves: SaveData[]
@@ -73,6 +66,7 @@ interface BiComparisonData {
   saveName: string
   biId: number
   saveId: string
+  link?: string
 }
 
 // Enhanced color palette
@@ -141,6 +135,7 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
         saveName: currentSaveName || "Sessão Atual",
         biId: bi.id,
         saveId: "current",
+        link: bi.link,
       })
     })
 
@@ -158,6 +153,7 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
           saveName: save.name,
           biId: bi.id,
           saveId: save.id,
+          link: bi.link,
         })
       })
     })
@@ -436,7 +432,7 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
   }
 
   const toggleBiSelection = (biKey: string) => {
-    setSelectedBis((prev) => (prev.includes(biKey) ? prev.filter((key) => key !== biKey) : [...prev, biKey]))
+    setSelectedBis((prev) => (prev.includes(biKey) ? prev.filter((key) => key !== biKey) : [...prev, key]))
   }
 
   const handleAreaToggle = (area: string, shiftKey: boolean) => {
@@ -922,460 +918,6 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
               </CardContent>
             </Card>
           </div>
-
-          {comparisonData.length === 0 ? (
-            <Card className="border-2 border-gray-200 shadow-lg">
-              <CardContent className="py-12 text-center">
-                <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 font-medium">Nenhum dado selecionado para análise</p>
-                <p className="text-gray-500 text-sm mt-2">
-                  Selecione a sessão atual ou saves para começar a comparação
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-blue-50 to-indigo-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-blue-700">Total de BIs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-blue-600">
-                      {comparisonData.reduce((sum, item) => sum + item.total, 0)}
-                    </div>
-                    <p className="text-xs font-semibold text-blue-500 mt-1">
-                      Média:{" "}
-                      {(comparisonData.reduce((sum, item) => sum + item.total, 0) / comparisonData.length).toFixed(1)}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-green-50 to-emerald-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-green-700">Atualizados</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-green-600">
-                      {comparisonData.reduce((sum, item) => sum + item.updated, 0)}
-                    </div>
-                    <p className="text-xs font-semibold text-green-500 mt-1">
-                      Média:{" "}
-                      {(comparisonData.reduce((sum, item) => sum + item.updated, 0) / comparisonData.length).toFixed(1)}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-red-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-red-50 to-rose-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-red-700">Desatualizados</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-red-600">
-                      {comparisonData.reduce((sum, item) => sum + item.outdated, 0)}
-                    </div>
-                    <p className="text-xs font-semibold text-red-500 mt-1">
-                      Média:{" "}
-                      {(comparisonData.reduce((sum, item) => sum + item.outdated, 0) / comparisonData.length).toFixed(
-                        1,
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-orange-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-orange-50 to-amber-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold text-orange-700">Descontinuados</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-orange-600">
-                      {comparisonData.reduce((sum, item) => sum + item.discontinued, 0)}
-                    </div>
-                    <p className="text-xs font-semibold text-orange-500 mt-1">
-                      Média:{" "}
-                      {(
-                        comparisonData.reduce((sum, item) => sum + item.discontinued, 0) / comparisonData.length
-                      ).toFixed(1)}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Absolute Numbers Chart */}
-                <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                    <CardTitle className="flex items-center">
-                      <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-                      <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent font-bold">
-                        Comparação de Números Absolutos
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="font-medium">Quantidade de BIs por categoria</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <ChartContainer
-                      config={{
-                        updated: {
-                          label: "Atualizados",
-                          color: COLORS.status.updated,
-                        },
-                        outdated: {
-                          label: "Desatualizados",
-                          color: COLORS.status.outdated,
-                        },
-                        discontinued: {
-                          label: "Descontinuados",
-                          color: COLORS.status.discontinued,
-                        },
-                      }}
-                      className="h-[300px]"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={comparisonData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#6b7280" />
-                          <YAxis stroke="#6b7280" />
-                          <ChartTooltip
-                            content={<ChartTooltipContent />}
-                            cursor={{ fill: "rgba(59, 130, 246, 0.1)" }}
-                          />
-                          <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                          <Bar
-                            dataKey="updated"
-                            fill={COLORS.status.updated}
-                            name="Atualizados"
-                            radius={[8, 8, 0, 0]}
-                          />
-                          <Bar
-                            dataKey="outdated"
-                            fill={COLORS.status.outdated}
-                            name="Desatualizados"
-                            radius={[8, 8, 0, 0]}
-                          />
-                          <Bar
-                            dataKey="discontinued"
-                            fill={COLORS.status.discontinued}
-                            name="Descontinuados"
-                            radius={[8, 8, 0, 0]}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
-
-                {/* Percentage Chart */}
-                <Card className="border-2 border-purple-100 shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-                    <CardTitle className="flex items-center">
-                      <TrendingUp className="h-5 w-5 mr-2 text-purple-600" />
-                      <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-bold">
-                        Comparação de Percentuais
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="font-medium">Distribuição percentual por categoria</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <ChartContainer
-                      config={{
-                        updatedPercent: {
-                          label: "% Atualizados",
-                          color: COLORS.status.updated,
-                        },
-                        outdatedPercent: {
-                          label: "% Desatualizados",
-                          color: COLORS.status.outdated,
-                        },
-                        discontinuedPercent: {
-                          label: "% Descontinuados",
-                          color: COLORS.status.discontinued,
-                        },
-                      }}
-                      className="h-[300px]"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={percentageData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#6b7280" />
-                          <YAxis stroke="#6b7280" />
-                          <ChartTooltip
-                            content={<ChartTooltipContent />}
-                            cursor={{ stroke: "#9ca3af", strokeWidth: 2 }}
-                          />
-                          <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                          <Line
-                            type="monotone"
-                            dataKey="updatedPercent"
-                            stroke={COLORS.status.updated}
-                            strokeWidth={3}
-                            name="% Atualizados"
-                            dot={{ fill: COLORS.status.updated, r: 5 }}
-                            activeDot={{ r: 7 }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="outdatedPercent"
-                            stroke={COLORS.status.outdated}
-                            strokeWidth={3}
-                            name="% Desatualizados"
-                            dot={{ fill: COLORS.status.outdated, r: 5 }}
-                            activeDot={{ r: 7 }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="discontinuedPercent"
-                            stroke={COLORS.status.discontinued}
-                            strokeWidth={3}
-                            name="% Descontinuados"
-                            dot={{ fill: COLORS.status.discontinued, r: 5 }}
-                            activeDot={{ r: 7 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
-
-                {/* Status Distribution Donut Chart */}
-                <Card className="border-2 border-indigo-100 shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                    <CardTitle className="flex items-center">
-                      <PieChartIcon className="h-5 w-5 mr-2 text-indigo-600" />
-                      <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold">
-                        Distribuição por Status
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="font-medium">Proporção geral de BIs por status</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="h-[300px] flex items-center justify-center">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={statusDistributionData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={100}
-                            paddingAngle={5}
-                            dataKey="value"
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                            labelLine={{ stroke: "#6b7280", strokeWidth: 2 }}
-                          >
-                            {statusDistributionData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} stroke="#fff" strokeWidth={2} />
-                            ))}
-                          </Pie>
-                          <ChartTooltip content={<CustomStatusTooltip />} />
-                          <Legend
-                            verticalAlign="bottom"
-                            height={36}
-                            formatter={renderColorfulLegend}
-                            wrapperStyle={{ paddingTop: "10px" }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Criticality Distribution Horizontal Bar Chart */}
-                <Card className="border-2 border-amber-100 shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50">
-                    <CardTitle className="flex items-center">
-                      <AlertCircle className="h-5 w-5 mr-2 text-amber-600" />
-                      <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent font-bold">
-                        Distribuição por Criticidade
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="font-medium">
-                      Quantidade de BIs por nível de criticidade
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={criticalityDistributionData} layout="vertical" margin={{ left: 100 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis type="number" stroke="#6b7280" />
-                          <YAxis type="category" dataKey="name" width={90} stroke="#6b7280" />
-                          <ChartTooltip
-                            content={<CustomCriticalityTooltip />}
-                            cursor={{ fill: "rgba(245, 158, 11, 0.1)" }}
-                          />
-                          <Bar dataKey="value" name="Quantidade" radius={[0, 8, 8, 0]}>
-                            {criticalityDistributionData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} stroke="#fff" strokeWidth={2} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Total BIs Trend */}
-                <Card className="border-2 border-indigo-100 shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50">
-                    <CardTitle className="flex items-center">
-                      <FileText className="h-5 w-5 mr-2 text-indigo-600" />
-                      <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent font-bold">
-                        Evolução Total de BIs
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="font-medium">Quantidade total ao longo do tempo</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <ChartContainer
-                      config={{
-                        total: {
-                          label: "Total de BIs",
-                          color: COLORS.primary.indigo,
-                        },
-                      }}
-                      className="h-[300px]"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={comparisonData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#6b7280" />
-                          <YAxis stroke="#6b7280" />
-                          <ChartTooltip
-                            content={<ChartTooltipContent />}
-                            cursor={{ stroke: "#9ca3af", strokeWidth: 2 }}
-                          />
-                          <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                          <Line
-                            type="monotone"
-                            dataKey="total"
-                            stroke={COLORS.primary.indigo}
-                            strokeWidth={4}
-                            name="Total de BIs"
-                            dot={{ fill: COLORS.primary.indigo, r: 6 }}
-                            activeDot={{ r: 8 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
-
-                {/* Pages Comparison */}
-                <Card className="border-2 border-teal-100 shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50">
-                    <CardTitle className="flex items-center">
-                      <Calendar className="h-5 w-5 mr-2 text-teal-600" />
-                      <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold">
-                        Total de Páginas
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="font-medium">Comparação do número de páginas</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <ChartContainer
-                      config={{
-                        totalPages: {
-                          label: "Total de Páginas",
-                          color: COLORS.primary.teal,
-                        },
-                      }}
-                      className="h-[300px]"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={comparisonData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#6b7280" />
-                          <YAxis stroke="#6b7280" />
-                          <ChartTooltip
-                            content={<ChartTooltipContent />}
-                            cursor={{ fill: "rgba(20, 184, 166, 0.1)" }}
-                          />
-                          <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                          <Bar
-                            dataKey="totalPages"
-                            fill={COLORS.primary.teal}
-                            name="Total de Páginas"
-                            radius={[8, 8, 0, 0]}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Detailed Comparison Table */}
-              <Card className="border-2 border-gray-200 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50">
-                  <CardTitle className="flex items-center">
-                    <ArrowUpDown className="h-5 w-5 mr-2 text-gray-600" />
-                    <span className="font-bold text-gray-800">Tabela de Comparação Detalhada</span>
-                  </CardTitle>
-                  <CardDescription className="font-medium">Visão completa de todas as métricas</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gradient-to-r from-gray-100 to-slate-100">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Nome</th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Total</th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                            <CheckCircle className="h-4 w-4 inline mr-1 text-green-600" />
-                            Atualizados
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                            <XCircle className="h-4 w-4 inline mr-1 text-red-600" />
-                            Desatualizados
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                            <AlertCircle className="h-4 w-4 inline mr-1 text-orange-600" />
-                            Descontinuados
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                            <FileText className="h-4 w-4 inline mr-1 text-purple-600" />
-                            Páginas
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {comparisonData.map((item, index) => (
-                          <tr key={index} className="hover:bg-gradient-to-r hover:from-gray-50 hover:to-slate-50">
-                            <td className="px-4 py-3 text-sm font-bold text-gray-900">{item.name}</td>
-                            <td className="px-4 py-3 text-center text-sm font-bold text-blue-600">{item.total}</td>
-                            <td className="px-4 py-3 text-center">
-                              <div className="text-sm font-bold text-green-600">{item.updated}</div>
-                              <div className="text-xs font-semibold text-green-500">
-                                {item.total > 0 ? ((item.updated / item.total) * 100).toFixed(1) : 0}%
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <div className="text-sm font-bold text-red-600">{item.outdated}</div>
-                              <div className="text-xs font-semibold text-red-500">
-                                {item.total > 0 ? ((item.outdated / item.total) * 100).toFixed(1) : 0}%
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <div className="text-sm font-bold text-orange-600">{item.discontinued}</div>
-                              <div className="text-xs font-semibold text-orange-500">
-                                {item.total > 0 ? ((item.discontinued / item.total) * 100).toFixed(1) : 0}%
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-center text-sm font-bold text-purple-600">
-                              {item.totalPages}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
         </TabsContent>
 
         {/* BIS COMPARISON TAB */}
@@ -1493,6 +1035,13 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
                                 <Badge variant="outline" className="text-xs bg-white">
                                   {bi.pages} {bi.pages === 1 ? "página" : "páginas"}
                                 </Badge>
+                                {bi.link && (
+                                  <Button variant="link" size="sm" asChild>
+                                    <a href={bi.link} target="_blank" rel="noopener noreferrer">
+                                      <Link className="h-3 w-3" />
+                                    </a>
+                                  </Button>
+                                )}
                               </div>
                             </label>
                           </div>
@@ -1698,200 +1247,6 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Detailed Comparison Table */}
-              <Card className="border-2 border-gray-200 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50">
-                  <CardTitle className="flex items-center">
-                    <ArrowUpDown className="h-5 w-5 mr-2 text-gray-600" />
-                    <span className="font-bold text-gray-800">Tabela Comparativa Detalhada</span>
-                  </CardTitle>
-                  <CardDescription className="font-medium">
-                    Comparação lado a lado de todos os BIs selecionados
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gradient-to-r from-gray-100 to-slate-100">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">BI</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Save</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Área</th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Status</th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                            Criticidade
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Páginas</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Responsável</th>
-                          <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                            Última Atualização
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {selectedBisData.map((bi, index) => (
-                          <tr
-                            key={`${bi.saveId}-${bi.biId}`}
-                            className="hover:bg-gradient-to-r hover:from-gray-50 hover:to-slate-50"
-                          >
-                            <td className="px-4 py-3">
-                              <div className="flex items-center space-x-2">
-                                <div
-                                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                                  style={{ backgroundColor: COLORS.chart[index % COLORS.chart.length] }}
-                                >
-                                  {index + 1}
-                                </div>
-                                <span className="text-sm font-semibold text-gray-900">{bi.biName}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge variant="outline" className="text-xs font-medium">
-                                {bi.saveName}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700">{bi.area}</td>
-                            <td className="px-4 py-3 text-center">
-                              <Badge className={`text-xs font-semibold ${getStatusColor(bi.status)}`}>
-                                {bi.status}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <Badge className={`text-xs font-semibold ${getCriticalityColor(bi.criticality)}`}>
-                                {bi.criticality}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
-                                {bi.pages}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700">{bi.owner || "Sem responsável"}</td>
-                            <td className="px-4 py-3 text-center text-sm text-gray-600">
-                              {new Date(bi.lastUpdate + "T00:00:00").toLocaleDateString("pt-BR", {
-                                month: "2-digit",
-                                year: "numeric",
-                              })}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Insights Card */}
-              <Card className="border-2 border-teal-100 shadow-lg bg-gradient-to-br from-teal-50 to-cyan-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2 text-teal-600" />
-                    <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold">
-                      Insights da Comparação
-                    </span>
-                  </CardTitle>
-                  <CardDescription className="font-medium">Análise automática dos BIs selecionados</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="p-4 bg-white rounded-lg border-2 border-teal-200 shadow-sm">
-                      <div className="text-xs font-bold text-teal-700 uppercase mb-1">Total de Páginas</div>
-                      <div className="text-3xl font-bold text-teal-600">
-                        {selectedBisData.reduce((sum, bi) => sum + bi.pages, 0)}
-                      </div>
-                      <div className="text-xs text-teal-500 mt-1">
-                        Média:{" "}
-                        {(selectedBisData.reduce((sum, bi) => sum + bi.pages, 0) / selectedBisData.length).toFixed(1)}
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border-2 border-green-200 shadow-sm">
-                      <div className="text-xs font-bold text-green-700 uppercase mb-1">Taxa de Atualização</div>
-                      <div className="text-3xl font-bold text-green-600">
-                        {(
-                          (selectedBisData.filter((bi) => bi.status === "Atualizado").length / selectedBisData.length) *
-                          100
-                        ).toFixed(0)}
-                        %
-                      </div>
-                      <div className="text-xs text-green-500 mt-1">
-                        {selectedBisData.filter((bi) => bi.status === "Atualizado").length} de {selectedBisData.length}
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border-2 border-amber-200 shadow-sm">
-                      <div className="text-xs font-bold text-amber-700 uppercase mb-1">Áreas Diferentes</div>
-                      <div className="text-3xl font-bold text-amber-600">
-                        {new Set(selectedBisData.map((bi) => bi.area)).size}
-                      </div>
-                      <div className="text-xs text-amber-500 mt-1">Comparação entre áreas</div>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border-2 border-purple-200 shadow-sm">
-                      <div className="text-xs font-bold text-purple-700 uppercase mb-1">Saves Diferentes</div>
-                      <div className="text-3xl font-bold text-purple-600">
-                        {new Set(selectedBisData.map((bi) => bi.saveId)).size}
-                      </div>
-                      <div className="text-xs text-purple-500 mt-1">Comparação temporal</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 p-4 bg-white rounded-lg border-2 border-blue-200">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <AlertCircle className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-blue-900 text-sm mb-2">Observações:</h4>
-                        <ul className="space-y-1 text-xs text-blue-800">
-                          {selectedBisData.filter((bi) => bi.status.includes("Desatualizado")).length > 0 && (
-                            <li className="flex items-start">
-                              <span className="mr-2">•</span>
-                              <span>
-                                <strong>
-                                  {selectedBisData.filter((bi) => bi.status.includes("Desatualizado")).length}
-                                </strong>{" "}
-                                BI(s) necessitam atualização
-                              </span>
-                            </li>
-                          )}
-                          {selectedBisData.filter((bi) => bi.criticality === "Alta").length > 0 && (
-                            <li className="flex items-start">
-                              <span className="mr-2">•</span>
-                              <span>
-                                <strong>{selectedBisData.filter((bi) => bi.criticality === "Alta").length}</strong>{" "}
-                                BI(s) com criticidade alta
-                              </span>
-                            </li>
-                          )}
-                          {selectedBisData.filter((bi) => !bi.owner || bi.owner === "").length > 0 && (
-                            <li className="flex items-start">
-                              <span className="mr-2">•</span>
-                              <span>
-                                <strong>{selectedBisData.filter((bi) => !bi.owner || bi.owner === "").length}</strong>{" "}
-                                BI(s) sem responsável definido
-                              </span>
-                            </li>
-                          )}
-                          {new Set(selectedBisData.map((bi) => bi.saveId)).size > 1 && (
-                            <li className="flex items-start">
-                              <span className="mr-2">•</span>
-                              <span>Comparação entre diferentes saves permite análise de evolução temporal</span>
-                            </li>
-                          )}
-                          {new Set(selectedBisData.map((bi) => bi.area)).size > 1 && (
-                            <li className="flex items-start">
-                              <span className="mr-2">•</span>
-                              <span>Comparação entre diferentes áreas permite identificar padrões organizacionais</span>
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </>
           )}
         </TabsContent>

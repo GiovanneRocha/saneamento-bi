@@ -6,7 +6,6 @@ import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home, GitCompare } from "l
 import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
 import {
-  Upload,
   Download,
   Search,
   Edit2,
@@ -49,6 +48,7 @@ import {
   SidebarInset,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import * as XLSX from "xlsx"
 
 // Funções de persistência
 const STORAGE_KEY_BIS = "bi-management-bis"
@@ -781,23 +781,68 @@ const BiManagementSystem = (): ReactElement => {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const content = e.target?.result as string
-        const importedSave = JSON.parse(content)
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
 
-        if (
-          !importedSave.id ||
-          !importedSave.name ||
-          !Array.isArray(importedSave.bis) ||
-          !Array.isArray(importedSave.areas)
-        ) {
-          alert("Arquivo de save inválido. Verifique se o formato está correto.")
+        // Ler BIs
+        const bisSheet = workbook.Sheets["BIs"]
+        if (!bisSheet) {
+          alert("Arquivo Excel inválido. Planilha 'BIs' não encontrada.")
           return
         }
 
+        const bisData = XLSX.utils.sheet_to_json<any>(bisSheet)
+        const importedBis: BiItem[] = bisData.map((row, index) => ({
+          id: row.ID || Date.now() + index,
+          name: row.Nome || "",
+          owner: row.Responsável || "",
+          area: row.Área ? row.Área.split(",").map((a: string) => a.trim()) : [],
+          status: row.Status || "",
+          lastUpdate: row["Última Atualização"] || "",
+          observations: row.Observações || "",
+          usage: row.Uso || "",
+          criticality: row.Criticidade || "",
+          description: row.Descrição || "",
+          link: row.Link || "",
+        }))
+
+        // Ler Áreas
+        const areasSheet = workbook.Sheets["Áreas"]
+        let importedAreas: Area[] = []
+        if (areasSheet) {
+          const areasData = XLSX.utils.sheet_to_json<any>(areasSheet)
+          importedAreas = areasData.map((row, index) => ({
+            id: row.ID || Date.now() + index,
+            name: row.Nome || "",
+            description: row.Descrição || "",
+          }))
+        }
+
+        // Ler Metadados
+        const metaSheet = workbook.Sheets["Metadados"]
+        let saveName = "Save Importado"
+        let saveDescription = ""
+        if (metaSheet) {
+          const metaData = XLSX.utils.sheet_to_json<any>(metaSheet)
+          if (metaData.length > 0) {
+            saveName = metaData[0]["Nome do Save"] || saveName
+            saveDescription = metaData[0].Descrição || ""
+          }
+        }
+
         const newSave: SaveData = {
-          ...importedSave,
           id: Date.now().toString(),
+          name: saveName,
+          description: saveDescription,
           createdAt: new Date().toISOString(),
+          bis: importedBis,
+          areas: importedAreas,
+          stats: {
+            total: importedBis.length,
+            updated: importedBis.filter((bi) => bi.status === "Atualizado").length,
+            outdated: importedBis.filter((bi) => bi.status.includes("Desatualizado")).length,
+            discontinued: importedBis.filter((bi) => bi.status === "Descontinuado").length,
+          },
         }
 
         const updatedSaves = [...saves, newSave]
@@ -809,20 +854,55 @@ const BiManagementSystem = (): ReactElement => {
         alert("Erro ao importar save. Verifique se o arquivo está correto.")
       }
     }
-    reader.readAsText(file)
+    reader.readAsArrayBuffer(file)
   }
 
   const handleExportSave = (saveData: SaveData) => {
-    const json = JSON.stringify(saveData)
-    const blob = new Blob([json], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `save-${saveData.name.replace(/ /g, "_")}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const workbook = XLSX.utils.book_new()
+
+    // Criar planilha de BIs
+    const bisData = saveData.bis.map((bi) => ({
+      ID: bi.id,
+      Nome: bi.name,
+      Responsável: bi.owner,
+      Área: bi.area.join(", "),
+      Status: bi.status,
+      "Última Atualização": bi.lastUpdate,
+      Observações: bi.observations,
+      Uso: bi.usage,
+      Criticidade: bi.criticality,
+      Descrição: bi.description || "",
+      Link: bi.link || "",
+    }))
+    const bisSheet = XLSX.utils.json_to_sheet(bisData)
+    XLSX.utils.book_append_sheet(workbook, bisSheet, "BIs")
+
+    // Criar planilha de Áreas
+    const areasData = saveData.areas.map((area) => ({
+      ID: area.id,
+      Nome: area.name,
+      Descrição: area.description || "",
+    }))
+    const areasSheet = XLSX.utils.json_to_sheet(areasData)
+    XLSX.utils.book_append_sheet(workbook, areasSheet, "Áreas")
+
+    // Criar planilha de Metadados
+    const metaData = [
+      {
+        "Nome do Save": saveData.name,
+        Descrição: saveData.description || "",
+        "Data de Criação": new Date(saveData.createdAt).toLocaleString("pt-BR"),
+        "Total de BIs": saveData.stats.total,
+        Atualizados: saveData.stats.updated,
+        Desatualizados: saveData.stats.outdated,
+        Descontinuados: saveData.stats.discontinued || 0,
+      },
+    ]
+    const metaSheet = XLSX.utils.json_to_sheet(metaData)
+    XLSX.utils.book_append_sheet(workbook, metaSheet, "Metadados")
+
+    // Exportar arquivo
+    XLSX.writeFile(workbook, `save-${saveData.name.replace(/ /g, "_")}.xlsx`)
   }
 
   const formatDate = (dateString: string | undefined) => {
@@ -967,20 +1047,6 @@ const BiManagementSystem = (): ReactElement => {
                     >
                       <Plus className="h-4 w-4" />
                       <span className="font-medium">Adicionar BI</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className="w-full bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg transition-all duration-200 hover:shadow-md"
-                      tooltip="Importar dados de arquivo JSON"
-                    >
-                      <label className="cursor-pointer flex items-center w-full">
-                        <Upload className="h-4 w-4 mr-2" />
-                        <span className="font-medium">Importar Dados</span>
-                        <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-                      </label>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 

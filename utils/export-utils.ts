@@ -1,4 +1,5 @@
 // utils/export-utils.ts
+import * as XLSX from "xlsx"
 
 interface Page {
   id: number
@@ -23,6 +24,7 @@ interface BiItem {
   usage: string
   criticality: string
   description?: string
+  link?: string
   pages?: Page[]
 }
 
@@ -33,20 +35,47 @@ interface Area {
 }
 
 export const handleExport = (bis: BiItem[], areas: Area[]) => {
-  const exportData = {
-    bis: bis,
-    areas: areas,
-    exportDate: new Date().toISOString(),
-    version: "1.0",
-  }
+  const workbook = XLSX.utils.book_new()
 
-  const dataStr = JSON.stringify(exportData, null, 2)
-  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
+  // Criar planilha de BIs
+  const bisData = bis.map((bi) => ({
+    ID: bi.id,
+    Nome: bi.name,
+    Responsável: bi.owner,
+    Área: bi.area.join(", "),
+    Status: bi.status,
+    "Última Atualização": bi.lastUpdate,
+    Observações: bi.observations,
+    Uso: bi.usage,
+    Criticidade: bi.criticality,
+    Descrição: bi.description || "",
+    Link: bi.link || "",
+  }))
+  const bisSheet = XLSX.utils.json_to_sheet(bisData)
+  XLSX.utils.book_append_sheet(workbook, bisSheet, "BIs")
 
-  const exportFileDefaultName = `bis_backup_${new Date().toISOString().split("T")[0]}.json`
+  // Criar planilha de Áreas
+  const areasData = areas.map((area) => ({
+    ID: area.id,
+    Nome: area.name,
+    Descrição: area.description || "",
+  }))
+  const areasSheet = XLSX.utils.json_to_sheet(areasData)
+  XLSX.utils.book_append_sheet(workbook, areasSheet, "Áreas")
 
-  const linkElement = document.createElement("a")
-  linkElement.setAttribute("href", dataUri)
-  linkElement.setAttribute("download", exportFileDefaultName)
-  linkElement.click()
+  // Criar planilha de Metadados
+  const metaData = [
+    {
+      "Data de Exportação": new Date().toLocaleString("pt-BR"),
+      "Total de BIs": bis.length,
+      "Total de Áreas": areas.length,
+      Versão: "1.0",
+    },
+  ]
+  const metaSheet = XLSX.utils.json_to_sheet(metaData)
+  XLSX.utils.book_append_sheet(workbook, metaSheet, "Metadados")
+
+  // Exportar arquivo Excel
+  const fileName = `bis_backup_${new Date().toISOString().split("T")[0]}.xlsx`
+  XLSX.writeFile(workbook, fileName)
 }

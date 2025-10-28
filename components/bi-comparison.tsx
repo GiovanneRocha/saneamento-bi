@@ -17,6 +17,7 @@ import {
   TrendingDown,
   Minus,
   Info,
+  ExternalLink,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -487,7 +488,7 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
             </Card>
 
             <Card className="border-l-4 border-l-orange-500">
-              <CardHeader className="pb-2">
+              <CardHeader>
                 <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
                   <XCircle className="h-4 w-4 mr-1" />
                   Removidos
@@ -653,8 +654,19 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
                               </button>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">{comp.biName}</div>
+                                {(comp.save1Data?.link || comp.save2Data?.link) && (
+                                  <a
+                                    href={comp.save2Data?.link || comp.save1Data?.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs mt-1"
+                                  >
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    Acessar BI
+                                  </a>
+                                )}
                                 {comp.hasChanges && (
-                                  <Badge variant="outline" className="mt-1 text-xs">
+                                  <Badge variant="outline" className="mt-1 text-xs ml-2">
                                     Modificado
                                   </Badge>
                                 )}
@@ -750,6 +762,20 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
                                           <span className="font-medium">Descrição:</span> {comp.save1Data.description}
                                         </p>
                                       )}
+                                      {comp.save1Data.link && (
+                                        <p>
+                                          <span className="font-medium">Link:</span>{" "}
+                                          <a
+                                            href={comp.save1Data.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800 inline-flex items-center"
+                                          >
+                                            <ExternalLink className="h-3 w-3 mr-1" />
+                                            Acessar
+                                          </a>
+                                        </p>
+                                      )}
                                     </div>
                                   ) : (
                                     <p className="text-gray-400 italic">BI não existia neste save</p>
@@ -773,6 +799,20 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
                                       {comp.save2Data.description && (
                                         <p>
                                           <span className="font-medium">Descrição:</span> {comp.save2Data.description}
+                                        </p>
+                                      )}
+                                      {comp.save2Data.link && (
+                                        <p>
+                                          <span className="font-medium">Link:</span>{" "}
+                                          <a
+                                            href={comp.save2Data.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800 inline-flex items-center"
+                                          >
+                                            <ExternalLink className="h-3 w-3 mr-1" />
+                                            Acessar
+                                          </a>
                                         </p>
                                       )}
                                     </div>

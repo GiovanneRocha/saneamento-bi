@@ -602,47 +602,117 @@ const BiManagementSystem = (): ReactElement => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string
-        const importedData = JSON.parse(content)
+    const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls")
 
-        if (!importedData || !Array.isArray(importedData.bis) || !Array.isArray(importedData.areas)) {
-          alert("Arquivo inválido. Por favor, use um arquivo exportado pelo sistema com a estrutura correta.")
-          return
-        }
+    if (isExcel) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer)
+          const workbook = XLSX.read(data, { type: "array" })
 
-        const currentBisMap = new Map<number, BiItem>(bis.map((bi) => [bi.id, bi]))
-        importedData.bis.forEach((importedBi: BiItem) => {
-          if (typeof importedBi.area === "string") {
-            importedBi.area = [importedBi.area]
+          const bisSheet = workbook.Sheets["BIs"]
+          if (!bisSheet) {
+            alert("Arquivo Excel inválido. Planilha 'BIs' não encontrada.")
+            return
           }
-          currentBisMap.set(importedBi.id, importedBi)
-        })
-        const mergedBis = Array.from(currentBisMap.values())
 
-        const currentAreasMap = new Map<number, Area>(areas.map((area) => [area.id, area]))
-        importedData.areas.forEach((importedArea: Area) => {
-          currentAreasMap.set(importedArea.id, importedArea)
-        })
-        const mergedAreas = Array.from(currentAreasMap.values())
+          const bisData = XLSX.utils.sheet_to_json<any>(bisSheet)
+          const importedBis: BiItem[] = bisData.map((row, index) => ({
+            id: row.ID || Date.now() + index,
+            name: row.Nome || "",
+            owner: row.Responsável || "",
+            area: row.Área ? row.Área.split(",").map((a: string) => a.trim()) : [],
+            status: row.Status || "",
+            lastUpdate: row["Última Atualização"] || "",
+            observations: row.Observações || "",
+            usage: row.Uso || "",
+            criticality: row.Criticidade || "",
+            description: row.Descrição || "",
+            link: row.Link || "",
+          }))
 
-        setBis(mergedBis)
-        setAreas(mergedAreas)
-        calculateStats(mergedBis)
-        saveToLocalStorage(mergedBis, mergedAreas)
-        setCurrentSaveName(null)
+          const areasSheet = workbook.Sheets["Áreas"]
+          let importedAreas: Area[] = []
+          if (areasSheet) {
+            const areasData = XLSX.utils.sheet_to_json<any>(areasSheet)
+            importedAreas = areasData.map((row, index) => ({
+              id: row.ID || Date.now() + index,
+              name: row.Nome || "",
+              description: row.Descrição || "",
+            }))
+          }
 
-        alert(
-          `Dados importados e mesclados com sucesso!\n${importedData.bis.length} BIs e ${importedData.areas.length} áreas do arquivo foram processados.`,
-        )
-      } catch (error) {
-        console.error("Erro durante a importação:", error)
-        alert("Erro ao importar arquivo. Verifique se o formato está correto e tente novamente.")
+          const currentBisMap = new Map<number, BiItem>(bis.map((bi) => [bi.id, bi]))
+          importedBis.forEach((importedBi: BiItem) => {
+            currentBisMap.set(importedBi.id, importedBi)
+          })
+          const mergedBis = Array.from(currentBisMap.values())
+
+          const currentAreasMap = new Map<number, Area>(areas.map((area) => [area.id, area]))
+          importedAreas.forEach((importedArea: Area) => {
+            currentAreasMap.set(importedArea.id, importedArea)
+          })
+          const mergedAreas = Array.from(currentAreasMap.values())
+
+          setBis(mergedBis)
+          setAreas(mergedAreas)
+          calculateStats(mergedBis)
+          saveToLocalStorage(mergedBis, mergedAreas)
+          setCurrentSaveName(null)
+
+          alert(
+            `Dados importados e mesclados com sucesso!\n${importedBis.length} BIs e ${importedAreas.length} áreas do arquivo foram processados.`,
+          )
+        } catch (error) {
+          console.error("Erro durante a importação:", error)
+          alert("Erro ao importar arquivo Excel. Verifique se o formato está correto e tente novamente.")
+        }
       }
+      reader.readAsArrayBuffer(file)
+    } else {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string
+          const importedData = JSON.parse(content)
+
+          if (!importedData || !Array.isArray(importedData.bis) || !Array.isArray(importedData.areas)) {
+            alert("Arquivo inválido. Por favor, use um arquivo exportado pelo sistema com a estrutura correta.")
+            return
+          }
+
+          const currentBisMap = new Map<number, BiItem>(bis.map((bi) => [bi.id, bi]))
+          importedData.bis.forEach((importedBi: BiItem) => {
+            if (typeof importedBi.area === "string") {
+              importedBi.area = [importedBi.area]
+            }
+            currentBisMap.set(importedBi.id, importedBi)
+          })
+          const mergedBis = Array.from(currentBisMap.values())
+
+          const currentAreasMap = new Map<number, Area>(areas.map((area) => [area.id, area]))
+          importedData.areas.forEach((importedArea: Area) => {
+            currentAreasMap.set(importedArea.id, importedArea)
+          })
+          const mergedAreas = Array.from(currentAreasMap.values())
+
+          setBis(mergedBis)
+          setAreas(mergedAreas)
+          calculateStats(mergedBis)
+          saveToLocalStorage(mergedBis, mergedAreas)
+          setCurrentSaveName(null)
+
+          alert(
+            `Dados importados e mesclados com sucesso!\n${importedData.bis.length} BIs e ${importedData.areas.length} áreas do arquivo foram processados.`,
+          )
+        } catch (error) {
+          console.error("Erro durante a importação:", error)
+          alert("Erro ao importar arquivo. Verifique se o formato está correto e tente novamente.")
+        }
+      }
+      reader.readAsText(file)
     }
-    reader.readAsText(file)
 
     event.target.value = ""
   }
@@ -784,7 +854,6 @@ const BiManagementSystem = (): ReactElement => {
         const data = new Uint8Array(e.target?.result as ArrayBuffer)
         const workbook = XLSX.read(data, { type: "array" })
 
-        // Ler BIs
         const bisSheet = workbook.Sheets["BIs"]
         if (!bisSheet) {
           alert("Arquivo Excel inválido. Planilha 'BIs' não encontrada.")
@@ -806,7 +875,6 @@ const BiManagementSystem = (): ReactElement => {
           link: row.Link || "",
         }))
 
-        // Ler Áreas
         const areasSheet = workbook.Sheets["Áreas"]
         let importedAreas: Area[] = []
         if (areasSheet) {
@@ -818,7 +886,6 @@ const BiManagementSystem = (): ReactElement => {
           }))
         }
 
-        // Ler Metadados
         const metaSheet = workbook.Sheets["Metadados"]
         let saveName = "Save Importado"
         let saveDescription = ""
@@ -860,7 +927,6 @@ const BiManagementSystem = (): ReactElement => {
   const handleExportSave = (saveData: SaveData) => {
     const workbook = XLSX.utils.book_new()
 
-    // Criar planilha de BIs
     const bisData = saveData.bis.map((bi) => ({
       ID: bi.id,
       Nome: bi.name,
@@ -877,7 +943,6 @@ const BiManagementSystem = (): ReactElement => {
     const bisSheet = XLSX.utils.json_to_sheet(bisData)
     XLSX.utils.book_append_sheet(workbook, bisSheet, "BIs")
 
-    // Criar planilha de Áreas
     const areasData = saveData.areas.map((area) => ({
       ID: area.id,
       Nome: area.name,
@@ -886,7 +951,6 @@ const BiManagementSystem = (): ReactElement => {
     const areasSheet = XLSX.utils.json_to_sheet(areasData)
     XLSX.utils.book_append_sheet(workbook, areasSheet, "Áreas")
 
-    // Criar planilha de Metadados
     const metaData = [
       {
         "Nome do Save": saveData.name,
@@ -901,7 +965,6 @@ const BiManagementSystem = (): ReactElement => {
     const metaSheet = XLSX.utils.json_to_sheet(metaData)
     XLSX.utils.book_append_sheet(workbook, metaSheet, "Metadados")
 
-    // Exportar arquivo
     XLSX.writeFile(workbook, `save-${saveData.name.replace(/ /g, "_")}.xlsx`)
   }
 
@@ -1048,6 +1111,24 @@ const BiManagementSystem = (): ReactElement => {
                       <Plus className="h-4 w-4" />
                       <span className="font-medium">Adicionar BI</span>
                     </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => document.getElementById("import-file-sidebar")?.click()}
+                      className="w-full bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-lg transition-all duration-200 hover:shadow-md"
+                      tooltip="Importar dados de arquivo Excel ou JSON"
+                    >
+                      <Download className="h-4 w-4 rotate-180" />
+                      <span className="font-medium">Importar Dados</span>
+                    </SidebarMenuButton>
+                    <input
+                      id="import-file-sidebar"
+                      type="file"
+                      accept=".json,.xlsx,.xls"
+                      onChange={handleImport}
+                      className="hidden"
+                    />
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
@@ -1491,28 +1572,37 @@ const BiManagementSystem = (): ReactElement => {
                                         {bi.pages && bi.pages.length > 0 && (
                                           <div>
                                             <span className="font-medium text-gray-700">Páginas:</span>
-                                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                              {bi.pages.length} {bi.pages.length === 1 ? "página" : "páginas"}
-                                            </span>
-                                          </div>
-                                        )}
-                                        {bi.observations && (
-                                          <div>
-                                            <span className="font-medium text-gray-700">Observações:</span>
-                                            <p className="text-gray-600 mt-1">{bi.observations}</p>
+                                            <ul className="list-disc pl-5 mt-1">
+                                              {bi.pages.map((page) => (
+                                                <li key={page.id}>
+                                                  <span className="font-semibold">{page.name}</span> -{" "}
+                                                  {page.description} (
+                                                  <span className={getStatusColor(page.status)}>
+                                                    {getStatusIcon(page.status)} {page.status}
+                                                  </span>
+                                                  , Responsável: {page.owner || "N/A"})
+                                                </li>
+                                              ))}
+                                            </ul>
                                           </div>
                                         )}
                                         {bi.link && (
-                                          <div>
-                                            <span className="font-medium text-gray-700">Link:</span>
+                                          <div className="mt-2">
+                                            <span className="font-medium text-gray-700">Link: </span>
                                             <a
                                               href={bi.link}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium ml-2"
+                                              className="text-blue-600 hover:underline"
                                             >
-                                              🔗 Acessar BI
+                                              {bi.link}
                                             </a>
+                                          </div>
+                                        )}
+                                        {bi.observations && (
+                                          <div className="mt-2">
+                                            <span className="font-medium text-gray-700">Observações: </span>
+                                            {bi.observations}
                                           </div>
                                         )}
                                       </div>
@@ -1520,158 +1610,81 @@ const BiManagementSystem = (): ReactElement => {
                                   </td>
                                 </tr>
                               )}
-
-                              {expandedBis.has(bi.id) &&
-                                bi.pages?.map((page) => (
-                                  <tr key={`${bi.id}-${page.id}`} className="bg-gray-25 hover:bg-gray-50">
-                                    <td className="px-6 py-3">
-                                      <div className="flex items-center pl-8">
-                                        <div className="w-4 h-4 mr-2"></div>
-                                        <FileText className="h-4 w-4 text-gray-300 mr-2" />
-                                        <div>
-                                          <div className="text-sm text-gray-700">{page.name}</div>
-                                          {page.observations && (
-                                            <div className="text-xs text-gray-400">{page.observations}</div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <span className="text-sm text-gray-500">-</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <span className="text-sm text-gray-500">-</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      {page.status && (
-                                        <span
-                                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(page.status)}`}
-                                        >
-                                          {getStatusIcon(page.status)}
-                                          <span className="ml-1">{page.status}</span>
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <span className="text-sm text-gray-500">-</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <span className="text-sm text-gray-500">-</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      {page.criticality !== undefined && (
-                                        <span
-                                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
-                                        >
-                                          {page.criticality || "Não Aplicável"}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="px-6 py-3 text-sm font-medium">
-                                      <div className="flex space-x-2"></div>
-                                    </td>
-                                  </tr>
-                                ))}
                             </React.Fragment>
                           ))}
                         </tbody>
                       </table>
                     </div>
-
                     {filteredBis.length === 0 && (
-                      <div className="text-center py-12">
-                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">Nenhum BI encontrado com os filtros aplicados</p>
+                      <div className="text-center py-8 px-4 text-gray-500">
+                        Nenhum BI encontrado com os filtros aplicados.
                       </div>
                     )}
-
-                    <div className="p-4 text-sm text-gray-600 border-t border-gray-200 text-center">
-                      <span>
-                        Mostrando {filteredBis.length} de {bis.length} BIs
-                      </span>
-                    </div>
                   </div>
-
-                  {showFloatingBar && (
-                    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-                      <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-4 border border-gray-200 flex-row text-left">
-                        <span className="text-sm text-gray-600 whitespace-nowrap">
-                          {filteredBis.length} de {bis.length} BIs
-                        </span>
-                        <div className="flex space-x-2">
-                          <Button
-                            onClick={scrollToTop}
-                            className="flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 text-xs"
-                            variant="ghost"
-                            size="sm"
-                          >
-                            <ArrowUp className="h-3 w-3 mr-1" />
-                            Início
-                          </Button>
-                          <Button
-                            onClick={scrollToBottom}
-                            className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-xs"
-                            variant="ghost"
-                            size="sm"
-                          >
-                            <ArrowDown className="h-3 w-3 mr-1" />
-                            Fim
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <footer className="mt-8 py-4 text-center text-gray-500 text-xs">
-                    <p className="text-left">
-                      Desenvolvido por{" "}
-                      <a
-                        href="https://github.com/GiovanneRocha"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Giovanne Rocha
-                      </a>
-                    </p>
-                  </footer>
                 </div>
               ) : currentPage === "analysis" ? (
-                <AnalysisPage saves={saves} currentBis={bis} currentAreas={areas} currentSaveName={currentSaveName} />
+                <AnalysisPage bisData={bis} />
               ) : (
-                <BiComparison saves={saves} currentBis={bis} currentSaveName={currentSaveName} />
+                <BiComparison
+                  saves={saves}
+                  currentSaveName={currentSaveName}
+                  onLoadSave={handleLoadSave}
+                  onDeleteSave={handleDeleteSave}
+                  onExportSave={handleExportSave}
+                  onImportSave={handleImportSave}
+                  onSaveCurrent={handleSaveCurrent}
+                  initialBis={bis}
+                  initialAreas={areas}
+                />
               )}
             </div>
           </div>
         </SidebarInset>
-
-        <SavesDrawer
-          isOpen={showSavesDrawer}
-          onClose={() => setShowSavesDrawer(false)}
-          currentBis={bis}
-          currentAreas={areas}
-          onLoadSave={handleLoadSave}
-          saves={saves}
-          onSaveCurrent={handleSaveCurrent}
-          onDeleteSave={handleDeleteSave}
-          onImportSave={handleImportSave}
-          onExportSave={handleExportSave}
-        />
-
-        {showAddForm && <BiForm onSave={handleAddBi} onCancel={() => setShowAddForm(false)} areas={areas} />}
-
-        {editingBi && <BiForm bi={editingBi} onSave={handleEditBi} onCancel={() => setEditingBi(null)} areas={areas} />}
-
-        {showAreaManagement && (
-          <AreaManagement
-            areas={areas}
-            onAddArea={handleAddArea}
-            onEditArea={handleEditArea}
-            onDeleteArea={handleDeleteArea}
-            onClose={() => setShowAreaManagement(false)}
-          />
-        )}
       </div>
+
+      {showAddForm && <BiForm onClose={() => setShowAddForm(false)} onSubmit={handleAddBi} />}
+      {editingBi && <BiForm onClose={() => setEditingBi(null)} initialData={editingBi} onSubmit={handleEditBi} />}
+      {showAreaManagement && (
+        <AreaManagement
+          areas={areas}
+          onClose={() => setShowAreaManagement(false)}
+          onAdd={handleAddArea}
+          onEdit={handleEditArea}
+          onDelete={handleDeleteArea}
+        />
+      )}
+      {showSavesDrawer && (
+        <SavesDrawer
+          saves={saves}
+          currentSaveName={currentSaveName}
+          onClose={() => setShowSavesDrawer(false)}
+          onLoad={handleLoadSave}
+          onDelete={handleDeleteSave}
+          onExport={handleExportSave}
+          onImport={handleImportSave}
+          onSaveCurrent={handleSaveCurrent}
+        />
+      )}
+
+      {showScrollToTopButton && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-4 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 z-50"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
+      {showFloatingBar && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white bg-opacity-80 backdrop-blur-sm rounded-full shadow-lg p-2 flex space-x-2 border border-gray-200">
+          <Button onClick={scrollToTop} variant="outline" size="icon" className="rounded-full bg-transparent">
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+          <Button onClick={scrollToBottom} variant="outline" size="icon" className="rounded-full bg-transparent">
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </SidebarProvider>
   )
 }

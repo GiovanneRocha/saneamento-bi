@@ -102,7 +102,12 @@ const COLORS = {
   ],
 }
 
-const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentAreas, currentSaveName }) => {
+const AnalysisPage: React.FC<AnalysisPageProps> = ({
+  saves = [],
+  currentBis = [],
+  currentAreas = [],
+  currentSaveName,
+}) => {
   const [activeTab, setActiveTab] = useState<"saves" | "bis">("saves")
 
   // Saves comparison states
@@ -122,41 +127,47 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
   const allAvailableBis = useMemo<BiComparisonData[]>(() => {
     const bis: BiComparisonData[] = []
 
-    // Add current session BIs
-    currentBis.forEach((bi) => {
-      bis.push({
-        biName: bi.name,
-        area: bi.area.join(", "),
-        status: bi.status,
-        criticality: bi.criticality || "Não Aplicável",
-        pages: bi.pages?.length || 0,
-        lastUpdate: bi.lastUpdate,
-        owner: bi.owner,
-        saveName: currentSaveName || "Sessão Atual",
-        biId: bi.id,
-        saveId: "current",
-        link: bi.link,
-      })
-    })
-
-    // Add saves BIs
-    saves.forEach((save) => {
-      save.bis.forEach((bi) => {
+    // Add current session BIs - with safety check
+    if (Array.isArray(currentBis)) {
+      currentBis.forEach((bi) => {
         bis.push({
           biName: bi.name,
-          area: bi.area.join(", "),
-          status: bi.status,
+          area: Array.isArray(bi.area) ? bi.area.join(", ") : "",
+          status: bi.status || "",
           criticality: bi.criticality || "Não Aplicável",
-          pages: bi.pages?.length || 0,
-          lastUpdate: bi.lastUpdate,
-          owner: bi.owner,
-          saveName: save.name,
+          pages: Array.isArray(bi.pages) ? bi.pages.length : 0,
+          lastUpdate: bi.lastUpdate || "",
+          owner: bi.owner || "",
+          saveName: currentSaveName || "Sessão Atual",
           biId: bi.id,
-          saveId: save.id,
+          saveId: "current",
           link: bi.link,
         })
       })
-    })
+    }
+
+    // Add saves BIs - with safety check
+    if (Array.isArray(saves)) {
+      saves.forEach((save) => {
+        if (save && Array.isArray(save.bis)) {
+          save.bis.forEach((bi) => {
+            bis.push({
+              biName: bi.name,
+              area: Array.isArray(bi.area) ? bi.area.join(", ") : "",
+              status: bi.status || "",
+              criticality: bi.criticality || "Não Aplicável",
+              pages: Array.isArray(bi.pages) ? bi.pages.length : 0,
+              lastUpdate: bi.lastUpdate || "",
+              owner: bi.owner || "",
+              saveName: save.name || "",
+              biId: bi.id,
+              saveId: save.id,
+              link: bi.link,
+            })
+          })
+        }
+      })
+    }
 
     return bis
   }, [currentBis, saves, currentSaveName])
@@ -195,17 +206,19 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
   const comparisonData = useMemo<ComparisonData[]>(() => {
     const data: ComparisonData[] = []
 
-    if (includeCurrentSession) {
+    if (includeCurrentSession && Array.isArray(currentBis)) {
       let filteredBis = [...currentBis]
 
       if (filterAreas.length > 0) {
-        filteredBis = filteredBis.filter((bi) => bi.area.some((area) => filterAreas.includes(area)))
+        filteredBis = filteredBis.filter(
+          (bi) => Array.isArray(bi.area) && bi.area.some((area) => filterAreas.includes(area)),
+        )
       }
 
       if (filterStatuses.length > 0) {
         filteredBis = filteredBis.filter((bi) => {
           if (filterStatuses.includes("updated") && bi.status === "Atualizado") return true
-          if (filterStatuses.includes("outdated") && bi.status.includes("Desatualizado")) return true
+          if (filterStatuses.includes("outdated") && bi.status?.includes("Desatualizado")) return true
           if (filterStatuses.includes("discontinued") && bi.status === "Descontinuado") return true
           return false
         })
@@ -222,47 +235,51 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
         name: currentSaveName || "Sessão Atual",
         total: filteredBis.length,
         updated: filteredBis.filter((bi) => bi.status === "Atualizado").length,
-        outdated: filteredBis.filter((bi) => bi.status.includes("Desatualizado")).length,
+        outdated: filteredBis.filter((bi) => bi.status?.includes("Desatualizado")).length,
         discontinued: filteredBis.filter((bi) => bi.status === "Descontinuado").length,
-        totalPages: filteredBis.reduce((sum, bi) => sum + (bi.pages?.length || 0), 0),
+        totalPages: filteredBis.reduce((sum, bi) => sum + (Array.isArray(bi.pages) ? bi.pages.length : 0), 0),
       })
     }
 
-    selectedSaves.forEach((saveId) => {
-      const save = saves.find((s) => s.id === saveId)
-      if (save) {
-        let filteredBis = [...save.bis]
+    if (Array.isArray(selectedSaves) && Array.isArray(saves)) {
+      selectedSaves.forEach((saveId) => {
+        const save = saves.find((s) => s.id === saveId)
+        if (save && Array.isArray(save.bis)) {
+          let filteredBis = [...save.bis]
 
-        if (filterAreas.length > 0) {
-          filteredBis = filteredBis.filter((bi) => bi.area.some((area) => filterAreas.includes(area)))
-        }
+          if (filterAreas.length > 0) {
+            filteredBis = filteredBis.filter(
+              (bi) => Array.isArray(bi.area) && bi.area.some((area) => filterAreas.includes(area)),
+            )
+          }
 
-        if (filterStatuses.length > 0) {
-          filteredBis = filteredBis.filter((bi) => {
-            if (filterStatuses.includes("updated") && bi.status === "Atualizado") return true
-            if (filterStatuses.includes("outdated") && bi.status.includes("Desatualizado")) return true
-            if (filterStatuses.includes("discontinued") && bi.status === "Descontinuado") return true
-            return false
+          if (filterStatuses.length > 0) {
+            filteredBis = filteredBis.filter((bi) => {
+              if (filterStatuses.includes("updated") && bi.status === "Atualizado") return true
+              if (filterStatuses.includes("outdated") && bi.status?.includes("Desatualizado")) return true
+              if (filterStatuses.includes("discontinued") && bi.status === "Descontinuado") return true
+              return false
+            })
+          }
+
+          if (filterCriticalities.length > 0) {
+            filteredBis = filteredBis.filter((bi) => {
+              if (filterCriticalities.includes("none") && (!bi.criticality || bi.criticality === "")) return true
+              return filterCriticalities.includes(bi.criticality)
+            })
+          }
+
+          data.push({
+            name: save.name,
+            total: filteredBis.length,
+            updated: filteredBis.filter((bi) => bi.status === "Atualizado").length,
+            outdated: filteredBis.filter((bi) => bi.status?.includes("Desatualizado")).length,
+            discontinued: filteredBis.filter((bi) => bi.status === "Descontinuado").length,
+            totalPages: filteredBis.reduce((sum, bi) => sum + (Array.isArray(bi.pages) ? bi.pages.length : 0), 0),
           })
         }
-
-        if (filterCriticalities.length > 0) {
-          filteredBis = filteredBis.filter((bi) => {
-            if (filterCriticalities.includes("none") && (!bi.criticality || bi.criticality === "")) return true
-            return filterCriticalities.includes(bi.criticality)
-          })
-        }
-
-        data.push({
-          name: save.name,
-          total: filteredBis.length,
-          updated: filteredBis.filter((bi) => bi.status === "Atualizado").length,
-          outdated: filteredBis.filter((bi) => bi.status.includes("Desatualizado")).length,
-          discontinued: filteredBis.filter((bi) => bi.status === "Descontinuado").length,
-          totalPages: filteredBis.reduce((sum, bi) => sum + (bi.pages?.length || 0), 0),
-        })
-      }
-    })
+      })
+    }
 
     return data
   }, [
@@ -308,25 +325,27 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
   const criticalityDistributionData = useMemo(() => {
     let allBis: BiItem[] = []
 
-    if (includeCurrentSession) {
+    if (includeCurrentSession && Array.isArray(currentBis)) {
       allBis = [...currentBis]
     }
 
-    selectedSaves.forEach((saveId) => {
-      const save = saves.find((s) => s.id === saveId)
-      if (save) {
-        allBis = [...allBis, ...save.bis]
-      }
-    })
+    if (Array.isArray(selectedSaves) && Array.isArray(saves)) {
+      selectedSaves.forEach((saveId) => {
+        const save = saves.find((s) => s.id === saveId)
+        if (save && Array.isArray(save.bis)) {
+          allBis = [...allBis, ...save.bis]
+        }
+      })
+    }
 
     if (filterAreas.length > 0) {
-      allBis = allBis.filter((bi) => bi.area.some((area) => filterAreas.includes(area)))
+      allBis = allBis.filter((bi) => Array.isArray(bi.area) && bi.area.some((area) => filterAreas.includes(area)))
     }
 
     if (filterStatuses.length > 0) {
       allBis = allBis.filter((bi) => {
         if (filterStatuses.includes("updated") && bi.status === "Atualizado") return true
-        if (filterStatuses.includes("outdated") && bi.status.includes("Desatualizado")) return true
+        if (filterStatuses.includes("outdated") && bi.status?.includes("Desatualizado")) return true
         if (filterStatuses.includes("discontinued") && bi.status === "Descontinuado") return true
         return false
       })
@@ -420,10 +439,27 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
   // Get all unique areas from saves and current session
   const allAreas = useMemo(() => {
     const areaSet = new Set<string>()
-    currentAreas.forEach((area) => areaSet.add(area.name))
-    saves.forEach((save) => {
-      save.areas.forEach((area) => areaSet.add(area.name))
-    })
+
+    if (Array.isArray(currentAreas)) {
+      currentAreas.forEach((area) => {
+        if (area && area.name) {
+          areaSet.add(area.name)
+        }
+      })
+    }
+
+    if (Array.isArray(saves)) {
+      saves.forEach((save) => {
+        if (save && Array.isArray(save.areas)) {
+          save.areas.forEach((area) => {
+            if (area && area.name) {
+              areaSet.add(area.name)
+            }
+          })
+        }
+      })
+    }
+
     return Array.from(areaSet).sort()
   }, [currentAreas, saves])
 
@@ -432,7 +468,7 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ saves, currentBis, currentA
   }
 
   const toggleBiSelection = (biKey: string) => {
-    setSelectedBis((prev) => (prev.includes(biKey) ? prev.filter((key) => key !== biKey) : [...prev, key]))
+    setSelectedBis((prev) => (prev.includes(biKey) ? prev.filter((key) => key !== biKey) : [...prev, biKey]))
   }
 
   const handleAreaToggle = (area: string, shiftKey: boolean) => {

@@ -13,71 +13,31 @@ import {
   Building2,
   CheckCircle,
   XCircle,
-  Users,
   FileSpreadsheet,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-interface BiItem {
-  id: number
-  name: string
-  owner: string
-  area: string[]
-  status: string
-  lastUpdate: string
-  observations: string
-  usage: string
-  criticality: string
-  description?: string
-  link?: string
-  pages?: any[]
-}
-
-interface Area {
-  id: number
-  name: string
-  description?: string
-}
-
-interface SaveData {
-  id: string
-  name: string
-  description?: string
-  createdAt: string
-  bis: BiItem[]
-  areas: Area[]
-  stats: {
-    total: number
-    updated: number
-    outdated: number
-    noOwner: number
-  }
-}
+import type { SaveData } from "@/types/bi-types"
 
 interface SavesDrawerProps {
-  isOpen: boolean
-  onClose: () => void
-  currentBis: BiItem[]
-  currentAreas: Area[]
   saves: SaveData[]
+  currentSaveName: string | null
+  onClose: () => void
+  onLoad: (save: SaveData) => void
+  onDelete: (saveId: string) => void
+  onExport: (save: SaveData) => void
+  onImport: (file: File) => void
   onSaveCurrent: (name: string, description?: string) => void
-  onLoadSave: (save: SaveData) => void
-  onDeleteSave: (saveId: string) => void
-  onImportSave: (file: File) => void
-  onExportSave: (save: SaveData) => void
 }
 
 const SavesDrawer: React.FC<SavesDrawerProps> = ({
-  isOpen,
-  onClose,
-  currentBis,
-  currentAreas,
   saves,
+  currentSaveName,
+  onClose,
+  onLoad,
+  onDelete,
+  onExport,
+  onImport,
   onSaveCurrent,
-  onLoadSave,
-  onDeleteSave,
-  onImportSave,
-  onExportSave,
 }) => {
   const [showSaveForm, setShowSaveForm] = useState(false)
   const [saveName, setSaveName] = useState("")
@@ -96,7 +56,7 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
   const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      onImportSave(file)
+      onImport(file)
       event.target.value = ""
     }
   }
@@ -111,15 +71,6 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
     })
   }
 
-  const currentStats = {
-    total: currentBis.length,
-    updated: currentBis.filter((bi) => bi.status === "Atualizado").length,
-    outdated: currentBis.filter((bi) => bi.status.includes("Desatualizado")).length,
-    noOwner: currentBis.filter((bi) => !bi.owner || bi.owner === "").length,
-  }
-
-  if (!isOpen) return null
-
   return (
     <>
       {/* Overlay */}
@@ -128,17 +79,17 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
       {/* Drawer */}
       <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl z-50 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-orange-600 to-orange-700">
           <div className="flex items-center space-x-3">
             <div className="bg-white p-2 rounded-lg">
-              <FileSpreadsheet className="h-6 w-6 text-blue-600" />
+              <FileSpreadsheet className="h-6 w-6 text-orange-600" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">Central de Saves</h2>
-              <p className="text-sm text-blue-100">Gerencie seus saves em Excel</p>
+              <p className="text-sm text-orange-100">Gerencie seus saves em Excel</p>
             </div>
           </div>
-          <Button onClick={onClose} variant="ghost" size="icon" className="text-white hover:bg-blue-500">
+          <Button onClick={onClose} variant="ghost" size="icon" className="text-white hover:bg-orange-500">
             <X className="h-6 w-6" />
           </Button>
         </div>
@@ -147,37 +98,17 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
         <div className="flex-1 overflow-y-auto p-6">
           {/* Current State Section */}
           <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado Atual</h3>
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Gerenciar Saves</h3>
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-blue-900">Dados em Memória</span>
-                <div className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-bold text-blue-900">{currentStats.total} BIs</span>
-                </div>
+                <span className="text-sm font-medium text-orange-900">
+                  {currentSaveName ? `Save Atual: ${currentSaveName}` : "Sessão Atual"}
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="flex items-center">
-                  <CheckCircle className="h-3 w-3 text-green-600 mr-1" />
-                  <span className="text-green-700">{currentStats.updated} Atualizados</span>
-                </div>
-                <div className="flex items-center">
-                  <XCircle className="h-3 w-3 text-red-600 mr-1" />
-                  <span className="text-red-700">{currentStats.outdated} Desatualizados</span>
-                </div>
-                <div className="flex items-center">
-                  <Users className="h-3 w-3 text-yellow-600 mr-1" />
-                  <span className="text-yellow-700">{currentStats.noOwner} Sem Responsável</span>
-                </div>
-                <div className="flex items-center">
-                  <Building2 className="h-3 w-3 text-purple-600 mr-1" />
-                  <span className="text-purple-700">{currentAreas.length} Áreas</span>
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={() => setShowSaveForm(true)}
-                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs"
+                  className="flex items-center px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 text-xs"
                 >
                   <Save className="h-3 w-3 mr-1" />
                   Salvar Estado Atual
@@ -202,7 +133,7 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                     type="text"
                     value={saveName}
                     onChange={(e) => setSaveName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                     placeholder="Ex: BIs Financeiro, BIs Críticos..."
                     required
                   />
@@ -213,14 +144,14 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                     value={saveDescription}
                     onChange={(e) => setSaveDescription(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                     placeholder="Descrição do contexto ou propósito deste save..."
                   />
                 </div>
                 <div className="flex space-x-2">
                   <Button
                     type="submit"
-                    className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs"
+                    className="flex items-center px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 text-xs"
                   >
                     <Save className="h-3 w-3 mr-1" />
                     Salvar
@@ -273,7 +204,7 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                         </div>
                         <div className="flex space-x-1 ml-3">
                           <Button
-                            onClick={() => onExportSave(save)}
+                            onClick={() => onExport(save)}
                             className="text-green-600 hover:text-green-900"
                             title="Exportar Save Excel"
                             variant="ghost"
@@ -282,7 +213,7 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
                             <Download className="h-3 w-3" />
                           </Button>
                           <Button
-                            onClick={() => onDeleteSave(save.id)}
+                            onClick={() => onDelete(save.id)}
                             className="text-red-600 hover:text-red-900"
                             title="Excluir Save"
                             variant="ghost"
@@ -315,8 +246,8 @@ const SavesDrawer: React.FC<SavesDrawerProps> = ({
 
                       {/* Load Button */}
                       <Button
-                        onClick={() => onLoadSave(save)}
-                        className="w-full flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs ml-6"
+                        onClick={() => onLoad(save)}
+                        className="w-full flex items-center justify-center px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 text-xs ml-6"
                         style={{ width: "calc(100% - 1.5rem)" }}
                       >
                         <Upload className="h-3 w-3 mr-1" />

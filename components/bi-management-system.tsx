@@ -1642,15 +1642,15 @@ const BiManagementSystem = (): ReactElement => {
         </SidebarInset>
       </div>
 
-      {showAddForm && <BiForm onClose={() => setShowAddForm(false)} onSubmit={handleAddBi} />}
-      {editingBi && <BiForm onClose={() => setEditingBi(null)} initialData={editingBi} onSubmit={handleEditBi} />}
+      {showAddForm && <BiForm onCancel={() => setShowAddForm(false)} onSave={handleAddBi} areas={areas} />}
+      {editingBi && <BiForm bi={editingBi} onCancel={() => setEditingBi(null)} onSave={handleEditBi} areas={areas} />}
       {showAreaManagement && (
         <AreaManagement
           areas={areas}
           onClose={() => setShowAreaManagement(false)}
-          onAdd={handleAddArea}
-          onEdit={handleEditArea}
-          onDelete={handleDeleteArea}
+          onAddArea={handleAddArea}
+          onEditArea={handleEditArea}
+          onDeleteArea={handleDeleteArea}
         />
       )}
       {showSavesDrawer && (

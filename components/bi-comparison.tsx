@@ -23,14 +23,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import type { SaveData, BiItem } from "@/types/bi-types"
+import type { SaveData, BiItem, Area } from "@/types/bi-types"
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 interface BiComparisonProps {
   saves: SaveData[]
-  currentBis: BiItem[]
   currentSaveName: string | null
+  onLoadSave: (save: SaveData) => void
+  onDeleteSave: (saveId: string) => void
+  onExportSave: (save: SaveData) => void
+  onImportSave: (file: File) => void
+  onSaveCurrent: (name: string, description?: string) => void
+  initialBis: BiItem[]
+  initialAreas: Area[]
 }
 
 interface BiComparison {
@@ -57,7 +63,17 @@ interface ComparisonStats {
   ownerChanges: number
 }
 
-const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentSaveName }) => {
+const BiComparison: React.FC<BiComparisonProps> = ({
+  saves,
+  currentSaveName,
+  onLoadSave,
+  onDeleteSave,
+  onExportSave,
+  onImportSave,
+  onSaveCurrent,
+  initialBis,
+  initialAreas,
+}) => {
   const [save1Id, setSave1Id] = useState<string>("")
   const [save2Id, setSave2Id] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -70,7 +86,7 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
       {
         id: "current",
         name: currentSaveName || "Sessão Atual",
-        bis: currentBis,
+        bis: initialBis,
       },
       ...saves.map((save) => ({
         id: save.id,
@@ -79,7 +95,7 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
       })),
     ]
     return options
-  }, [saves, currentBis, currentSaveName])
+  }, [saves, initialBis, currentSaveName])
 
   // Get selected saves data
   const save1Data = useMemo(() => {
@@ -405,7 +421,7 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
           {canCompare && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
               <div className="flex items-center">
-                <Info className="h-5 w-5 text-blue-600 mr-3" />
+                <Info className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-blue-900">
                     Comparando: {save1Data?.name} → {save2Data?.name}
@@ -654,7 +670,7 @@ const BiComparison: React.FC<BiComparisonProps> = ({ saves, currentBis, currentS
                               </button>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">{comp.biName}</div>
-                                {(comp.save1Data?.link || comp.save2Data?.link) && (
+                                {(comp.save2Data?.link || comp.save1Data?.link) && (
                                   <a
                                     href={comp.save2Data?.link || comp.save1Data?.link}
                                     target="_blank"

@@ -1,29 +1,11 @@
 "use client"
 
 import React from "react"
-import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home, GitCompare } from "lucide-react"
+import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home, GitCompare, ExternalLink } from 'lucide-react'
 
 import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
-import {
-  Download,
-  Search,
-  Edit2,
-  Trash2,
-  Plus,
-  FileText,
-  Users,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  BarChart3,
-  Building2,
-  ArrowUp,
-  ArrowDown,
-  ChevronDown,
-  ChevronRight,
-  ArrowUpDown,
-} from "lucide-react"
+import { Download, Search, Edit2, Trash2, Plus, FileText, Users, AlertCircle, CheckCircle, XCircle, BarChart3, Building2, ArrowUp, ArrowDown, ChevronDown, ChevronRight, ArrowUpDown } from 'lucide-react'
 import AreaManagement from "./area-management"
 import BiComparison from "./bi-comparison"
 import { Button } from "@/components/ui/button"
@@ -972,12 +954,12 @@ const BiManagementSystem = (): ReactElement => {
     if (!dateString) return "-"
     try {
       const date = new Date(dateString + "T00:00:00")
+      const day = String(date.getDate()).padStart(2, "0")
       const month = String(date.getMonth() + 1).padStart(2, "0")
       const year = date.getFullYear()
-      return `${month}/${year}`
+      return `${day}/${month}/${year}`
     } catch (error) {
-      console.error("Error formatting date:", dateString, error)
-      return dateString
+      return "-"
     }
   }
 
@@ -1517,7 +1499,7 @@ const BiManagementSystem = (): ReactElement => {
                                 <td className="px-6 py-4">
                                   <div className="flex items-center">
                                     <Users className="h-4 w-4 text-gray-400 mr-2" />
-                                    <span className="text-sm text-gray-900">{bi.owner || "Sem responsável"}</span>
+                                    <span className="text-sm text-gray-900">{bi.owner || "-"}</span>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4">
@@ -1532,13 +1514,17 @@ const BiManagementSystem = (): ReactElement => {
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-500">{formatDate(bi.lastUpdate)}</td>
-                                <td className="px-6 py-4 text-sm text-gray-900">{bi.usage}</td>
+                                <td className="px-6 py-4 text-sm text-gray-900">{bi.usage || "-"}</td>
                                 <td className="px-6 py-4">
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
-                                  >
-                                    {bi.criticality || "Não Aplicável"}
-                                  </span>
+                                  {bi.criticality ? (
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(bi.criticality)}`}
+                                    >
+                                      {bi.criticality}
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm text-gray-500">-</span>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 text-sm font-medium">
                                   <div className="flex space-x-2">
@@ -1565,47 +1551,77 @@ const BiManagementSystem = (): ReactElement => {
                               </tr>
 
                               {expandedBis.has(bi.id) && (
-                                <tr className="bg-blue-50">
+                                <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-400">
                                   <td colSpan={8} className="p-0">
-                                    <div className="px-6 py-3">
-                                      <div className="space-y-2 text-sm">
-                                        {bi.pages && bi.pages.length > 0 && (
-                                          <div>
-                                            <span className="font-medium text-gray-700">Páginas:</span>
-                                            <ul className="list-disc pl-5 mt-1">
-                                              {bi.pages.map((page) => (
-                                                <li key={page.id}>
-                                                  <span className="font-semibold">{page.name}</span> -{" "}
-                                                  {page.description} (
-                                                  <span className={getStatusColor(page.status)}>
-                                                    {getStatusIcon(page.status)} {page.status}
+                                    <div className="px-8 py-5 space-y-3">
+                                      {bi.link && (
+                                        <div className="flex items-start">
+                                          <span className="font-semibold text-gray-700 min-w-[120px]">Link do BI:</span>
+                                          <a
+                                            href={bi.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium flex items-center gap-2 transition-colors"
+                                          >
+                                            <ExternalLink className="h-4 w-4" />
+                                            Acessar BI
+                                          </a>
+                                        </div>
+                                      )}
+
+                                      {bi.description && (
+                                        <div className="flex items-start">
+                                          <span className="font-semibold text-gray-700 min-w-[120px]">Descrição:</span>
+                                          <span className="text-gray-900 flex-1">{bi.description}</span>
+                                        </div>
+                                      )}
+
+                                      {bi.observations && (
+                                        <div className="flex items-start">
+                                          <span className="font-semibold text-gray-700 min-w-[120px]">Observações:</span>
+                                          <span className="text-gray-900 flex-1">{bi.observations}</span>
+                                        </div>
+                                      )}
+
+                                      {bi.pages && bi.pages.length > 0 && (
+                                        <div className="pt-2 border-t border-blue-200">
+                                          <span className="font-semibold text-gray-700 block mb-2">Páginas do BI:</span>
+                                          <div className="space-y-2 ml-4">
+                                            {bi.pages.map((page) => (
+                                              <div
+                                                key={page.id}
+                                                className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
+                                              >
+                                                <div className="flex items-center justify-between mb-1">
+                                                  <span className="font-semibold text-gray-900">{page.name}</span>
+                                                  <span
+                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(page.status || "")}`}
+                                                  >
+                                                    {getStatusIcon(page.status || "")}
+                                                    <span className="ml-1">{page.status || "-"}</span>
                                                   </span>
-                                                  , Responsável: {page.owner || "N/A"})
-                                                </li>
-                                              ))}
-                                            </ul>
+                                                </div>
+                                                {page.description && (
+                                                  <p className="text-sm text-gray-600 mt-1">{page.description}</p>
+                                                )}
+                                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                                  <span>
+                                                    <span className="font-medium">Responsável:</span>{" "}
+                                                    {page.owner || "-"}
+                                                  </span>
+                                                  {page.criticality && (
+                                                    <span
+                                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(page.criticality)}`}
+                                                    >
+                                                      {page.criticality}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ))}
                                           </div>
-                                        )}
-                                        {bi.link && (
-                                          <div className="mt-2">
-                                            <span className="font-medium text-gray-700">Link: </span>
-                                            <a
-                                              href={bi.link}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-blue-600 hover:underline"
-                                            >
-                                              {bi.link}
-                                            </a>
-                                          </div>
-                                        )}
-                                        {bi.observations && (
-                                          <div className="mt-2">
-                                            <span className="font-medium text-gray-700">Observações: </span>
-                                            {bi.observations}
-                                          </div>
-                                        )}
-                                      </div>
+                                        </div>
+                                      )}
                                     </div>
                                   </td>
                                 </tr>
@@ -1672,7 +1688,7 @@ const BiManagementSystem = (): ReactElement => {
           className="fixed bottom-4 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 z-50"
           aria-label="Scroll to top"
         >
-          <ArrowUp className="h-5 w-5" />
+          <ArrowUp className="h-4 w-5" />
         </button>
       )}
       {showFloatingBar && (

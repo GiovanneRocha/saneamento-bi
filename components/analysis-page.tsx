@@ -2,20 +2,7 @@
 
 import type React from "react"
 import { useState, useMemo } from "react"
-import {
-  BarChart3,
-  Filter,
-  X,
-  Download,
-  CheckCircle,
-  XCircle,
-  FileText,
-  AlertCircle,
-  GitCompare,
-  Layers,
-  Target,
-  Link,
-} from "lucide-react"
+import { BarChart3, Filter, X, Download, CheckCircle, XCircle, FileText, AlertCircle, GitCompare, Layers, Target, Link } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -1072,11 +1059,15 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
                                   {bi.pages} {bi.pages === 1 ? "página" : "páginas"}
                                 </Badge>
                                 {bi.link && (
-                                  <Button variant="link" size="sm" asChild>
-                                    <a href={bi.link} target="_blank" rel="noopener noreferrer">
-                                      <Link className="h-3 w-3" />
-                                    </a>
-                                  </Button>
+                                  <a
+                                    href={bi.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs mt-1 font-medium hover:underline transition-colors"
+                                  >
+                                    <Link className="h-3 w-3 mr-1" />
+                                    Link do BI
+                                  </a>
                                 )}
                               </div>
                             </label>

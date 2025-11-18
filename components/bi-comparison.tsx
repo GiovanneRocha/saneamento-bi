@@ -2,23 +2,7 @@
 
 import React from "react"
 import { useState, useMemo } from "react"
-import {
-  GitCompare,
-  ChevronDown,
-  ChevronRight,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  ArrowRight,
-  Download,
-  Filter,
-  Search,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Info,
-  ExternalLink,
-} from "lucide-react"
+import { GitCompare, ChevronDown, ChevronRight, AlertTriangle, CheckCircle, XCircle, ArrowRight, Download, Filter, Search, TrendingUp, TrendingDown, Minus, Info, ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -660,29 +644,29 @@ const BiComparison: React.FC<BiComparisonProps> = ({
                             <div className="flex items-center">
                               <button
                                 onClick={() => toggleBiExpansion(comp.biId)}
-                                className="mr-2 p-1 hover:bg-gray-200 rounded"
+                                className="mr-2 p-1 hover:bg-gray-200 rounded transition-colors"
                               >
                                 {expandedBis.has(comp.biId) ? (
-                                  <ChevronDown className="h-4 w-4" />
+                                  <ChevronDown className="h-4 w-4 text-blue-600" />
                                 ) : (
-                                  <ChevronRight className="h-4 w-4" />
+                                  <ChevronRight className="h-4 w-4 text-gray-500" />
                                 )}
                               </button>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{comp.biName}</div>
+                              <div className="flex-1">
+                                <div className="text-sm font-semibold text-gray-900">{comp.biName}</div>
                                 {(comp.save2Data?.link || comp.save1Data?.link) && (
                                   <a
                                     href={comp.save2Data?.link || comp.save1Data?.link}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs mt-1"
+                                    className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs mt-1 font-medium hover:underline transition-colors"
                                   >
                                     <ExternalLink className="h-3 w-3 mr-1" />
-                                    Acessar BI
+                                    Link do BI
                                   </a>
                                 )}
                                 {comp.hasChanges && (
-                                  <Badge variant="outline" className="mt-1 text-xs ml-2">
+                                  <Badge variant="outline" className="mt-1 text-xs ml-2 border-yellow-400 text-yellow-700 bg-yellow-50">
                                     Modificado
                                   </Badge>
                                 )}
@@ -756,84 +740,94 @@ const BiComparison: React.FC<BiComparisonProps> = ({
                         </tr>
 
                         {expandedBis.has(comp.biId) && (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-4 bg-gray-50">
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <h4 className="font-semibold text-gray-700 mb-2">{save1Data?.name}</h4>
+                          <tr className="bg-gradient-to-r from-gray-50 to-blue-50">
+                            <td colSpan={5} className="px-6 py-5">
+                              <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3 p-4 bg-white rounded-lg border-2 border-gray-200">
+                                  <h4 className="font-bold text-gray-800 text-base border-b border-gray-300 pb-2">
+                                    {save1Data?.name}
+                                  </h4>
                                   {comp.save1Data ? (
-                                    <div className="space-y-1 text-gray-600">
-                                      <p>
-                                        <span className="font-medium">Responsável:</span>{" "}
-                                        {comp.save1Data.owner || "Sem responsável"}
-                                      </p>
-                                      <p>
-                                        <span className="font-medium">Área:</span> {comp.save1Data.area.join(", ")}
-                                      </p>
-                                      <p>
-                                        <span className="font-medium">Uso:</span> {comp.save1Data.usage || "-"}
-                                      </p>
+                                    <div className="space-y-2 text-sm">
+                                      <div className="flex items-start">
+                                        <span className="font-semibold text-gray-700 min-w-[100px]">Responsável:</span>
+                                        <span className="text-gray-900">{comp.save1Data.owner || "-"}</span>
+                                      </div>
+                                      <div className="flex items-start">
+                                        <span className="font-semibold text-gray-700 min-w-[100px]">Área:</span>
+                                        <span className="text-gray-900">{comp.save1Data.area.join(", ")}</span>
+                                      </div>
+                                      <div className="flex items-start">
+                                        <span className="font-semibold text-gray-700 min-w-[100px]">Uso:</span>
+                                        <span className="text-gray-900">{comp.save1Data.usage || "-"}</span>
+                                      </div>
                                       {comp.save1Data.description && (
-                                        <p>
-                                          <span className="font-medium">Descrição:</span> {comp.save1Data.description}
-                                        </p>
+                                        <div className="flex items-start pt-2 border-t border-gray-200">
+                                          <span className="font-semibold text-gray-700 min-w-[100px]">Descrição:</span>
+                                          <span className="text-gray-900">{comp.save1Data.description}</span>
+                                        </div>
                                       )}
                                       {comp.save1Data.link && (
-                                        <p>
-                                          <span className="font-medium">Link:</span>{" "}
+                                        <div className="flex items-start pt-2">
+                                          <span className="font-semibold text-gray-700 min-w-[100px]">Link:</span>
                                           <a
                                             href={comp.save1Data.link}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800 inline-flex items-center"
+                                            className="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 transition-colors"
                                           >
-                                            <ExternalLink className="h-3 w-3 mr-1" />
-                                            Acessar
+                                            <ExternalLink className="h-3 w-3" />
+                                            Link do BI
                                           </a>
-                                        </p>
+                                        </div>
                                       )}
                                     </div>
                                   ) : (
-                                    <p className="text-gray-400 italic">BI não existia neste save</p>
+                                    <p className="text-gray-400 italic text-sm">BI não existia neste save</p>
                                   )}
                                 </div>
 
-                                <div>
-                                  <h4 className="font-semibold text-gray-700 mb-2">{save2Data?.name}</h4>
+                                <div className="space-y-3 p-4 bg-white rounded-lg border-2 border-gray-200">
+                                  <h4 className="font-bold text-gray-800 text-base border-b border-gray-300 pb-2">
+                                    {save2Data?.name}
+                                  </h4>
                                   {comp.save2Data ? (
-                                    <div className="space-y-1 text-gray-600">
-                                      <p>
-                                        <span className="font-medium">Responsável:</span>{" "}
-                                        {comp.save2Data.owner || "Sem responsável"}
-                                      </p>
-                                      <p>
-                                        <span className="font-medium">Área:</span> {comp.save2Data.area.join(", ")}
-                                      </p>
-                                      <p>
-                                        <span className="font-medium">Uso:</span> {comp.save2Data.usage || "-"}
-                                      </p>
+                                    <div className="space-y-2 text-sm">
+                                      <div className="flex items-start">
+                                        <span className="font-semibold text-gray-700 min-w-[100px]">Responsável:</span>
+                                        <span className="text-gray-900">{comp.save2Data.owner || "-"}</span>
+                                      </div>
+                                      <div className="flex items-start">
+                                        <span className="font-semibold text-gray-700 min-w-[100px]">Área:</span>
+                                        <span className="text-gray-900">{comp.save2Data.area.join(", ")}</span>
+                                      </div>
+                                      <div className="flex items-start">
+                                        <span className="font-semibold text-gray-700 min-w-[100px]">Uso:</span>
+                                        <span className="text-gray-900">{comp.save2Data.usage || "-"}</span>
+                                      </div>
                                       {comp.save2Data.description && (
-                                        <p>
-                                          <span className="font-medium">Descrição:</span> {comp.save2Data.description}
-                                        </p>
+                                        <div className="flex items-start pt-2 border-t border-gray-200">
+                                          <span className="font-semibold text-gray-700 min-w-[100px]">Descrição:</span>
+                                          <span className="text-gray-900">{comp.save2Data.description}</span>
+                                        </div>
                                       )}
                                       {comp.save2Data.link && (
-                                        <p>
-                                          <span className="font-medium">Link:</span>{" "}
+                                        <div className="flex items-start pt-2">
+                                          <span className="font-semibold text-gray-700 min-w-[100px]">Link:</span>
                                           <a
                                             href={comp.save2Data.link}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800 inline-flex items-center"
+                                            className="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 transition-colors"
                                           >
-                                            <ExternalLink className="h-3 w-3 mr-1" />
-                                            Acessar
+                                            <ExternalLink className="h-3 w-3" />
+                                            Link do BI
                                           </a>
-                                        </p>
+                                        </div>
                                       )}
                                     </div>
                                   ) : (
-                                    <p className="text-gray-400 italic">BI foi removido neste save</p>
+                                    <p className="text-gray-400 italic text-sm">BI foi removido neste save</p>
                                   )}
                                 </div>
                               </div>

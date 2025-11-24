@@ -1,11 +1,29 @@
 "use client"
 
 import React from "react"
-import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home, GitCompare, ExternalLink } from 'lucide-react'
+import { ChevronUp, Lock, LogOut, Archive, BarChart2, Home, GitCompare, ExternalLink } from "lucide-react"
 
 import type { ReactElement } from "react"
 import { useState, useEffect } from "react"
-import { Download, Search, Edit2, Trash2, Plus, FileText, Users, AlertCircle, CheckCircle, XCircle, BarChart3, Building2, ArrowUp, ArrowDown, ChevronDown, ChevronRight, ArrowUpDown } from 'lucide-react'
+import {
+  Download,
+  Search,
+  Edit2,
+  Trash2,
+  Plus,
+  FileText,
+  Users,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  BarChart3,
+  Building2,
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  ChevronRight,
+  ArrowUpDown,
+} from "lucide-react"
 import AreaManagement from "./area-management"
 import BiComparison from "./bi-comparison"
 import { Button } from "@/components/ui/button"
@@ -1578,7 +1596,9 @@ const BiManagementSystem = (): ReactElement => {
 
                                       {bi.observations && (
                                         <div className="flex items-start">
-                                          <span className="font-semibold text-gray-700 min-w-[120px]">Observações:</span>
+                                          <span className="font-semibold text-gray-700 min-w-[120px]">
+                                            Observações:
+                                          </span>
                                           <span className="text-gray-900 flex-1">{bi.observations}</span>
                                         </div>
                                       )}
@@ -1639,7 +1659,7 @@ const BiManagementSystem = (): ReactElement => {
                   </div>
                 </div>
               ) : currentPage === "analysis" ? (
-                <AnalysisPage bisData={bis} />
+                <AnalysisPage saves={saves} currentBis={bis} currentAreas={areas} currentSaveName={currentSaveName} />
               ) : (
                 <BiComparison
                   saves={saves}
